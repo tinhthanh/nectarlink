@@ -1642,7 +1642,7 @@ pub fn input(window: Window, input: nectarlink_core::MirrorInput) {
             }
         });
     }
-    let queued = mirror_scroll::Queued { window, control, request, stream, input };
+    let queued = mirror_scroll::Queued { window, control, request: local_request, stream, input };
     if !queue.push(queued, nectarlink_core::MirrorControl::is_current) {
         tracing::debug!("no room for this input; the phone is behind");
     }
