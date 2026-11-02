@@ -207,19 +207,24 @@ impl ClipboardHistoryStore {
     /// history with `protector` and purging unpinned clips older than 7 days.
     pub fn open(data_dir: &Path, protector: Arc<dyn KeyProtector>) -> Self {
         let index_path = data_dir.join(INDEX_FILE);
+        let mut reseal = false;
         let state = match fs::read(&index_path) {
-            Ok(sealed) => protector
-                .unprotect(&sealed)
-                .ok()
-                .and_then(|plain| parse_stored_state(&plain))
-                .unwrap_or_default(),
+            Ok(sealed) => {
+                reseal = protector.needs_reseal(&sealed);
+                protector
+                    .unprotect(&sealed)
+                    .ok()
+                    .and_then(|plain| parse_stored_state(&plain))
+                    .unwrap_or_default()
+            }
             Err(_) => StoredState::default(),
         };
         let store = Self { data_dir: data_dir.to_path_buf(), protector, state: Mutex::new(state) };
         {
             let mut s = store.state.lock().unwrap_or_else(|e| e.into_inner());
             let evicted = store.evict_locked(&mut s.items);
-            if !evicted.is_empty() {
+            // `reseal`: written in plain by an older build, protect it now.
+            if reseal || !evicted.is_empty() {
                 let _ = store.save_locked(&s);
             }
         }
@@ -630,6 +635,42 @@ mod tests {
         let (mime, decrypted) = reopened.image_bytes(&img_item.id).unwrap();
         assert_eq!(mime, "image/png");
         assert_eq!(decrypted, png);
+    }
+
+    /// Like the macOS keychain protector: reads plain blobs from an older
+    /// build (no marker) and asks for them to be sealed again.
+    struct MarkedXorProtector;
+
+    impl KeyProtector for MarkedXorProtector {
+        fn id(&self) -> u8 {
+            98
+        }
+        fn protect(&self, plaintext: &[u8]) -> std::io::Result<Vec<u8>> {
+            Ok([b"X".as_slice(), &XorKeyProtector.protect(plaintext)?].concat())
+        }
+        fn unprotect(&self, sealed: &[u8]) -> std::io::Result<Vec<u8>> {
+            match sealed.strip_prefix(b"X") {
+                Some(rest) => XorKeyProtector.unprotect(rest),
+                None => Ok(sealed.to_vec()),
+            }
+        }
+        fn needs_reseal(&self, sealed: &[u8]) -> bool {
+            !sealed.starts_with(b"X")
+        }
+    }
+
+    #[test]
+    fn reseals_a_history_written_in_plain_by_an_older_build() {
+        let dir = tempfile::tempdir().unwrap();
+        let plain = ClipboardHistoryStore::open(dir.path(), Arc::new(PlainKeyProtector));
+        assert!(plain.record_text("meeting notes from before", "Pixel", true));
+        drop(plain);
+
+        let store = ClipboardHistoryStore::open(dir.path(), Arc::new(MarkedXorProtector));
+        assert_eq!(store.list(None).len(), 1, "the old history is kept");
+        let raw = fs::read(dir.path().join(INDEX_FILE)).unwrap();
+        assert!(raw.starts_with(b"X"), "rewritten sealed on open");
+        assert!(!String::from_utf8_lossy(&raw).contains("meeting notes from before"));
     }
 
     #[test]
