@@ -274,17 +274,27 @@ impl std::fmt::Debug for LocalSendState {
 impl LocalSendState {
     pub fn open(data_dir: &Path, protector: Arc<dyn KeyProtector>, configured_port: u16) -> Result<Self> {
         let state_path = data_dir.join(STATE_FILE);
+        let mut reseal = false;
         let mut stored: StoredLocalSendState = match fs::read(&state_path) {
-            Ok(sealed) => protector
-                .unprotect(&sealed)
-                .ok()
-                .and_then(|plain| serde_json::from_slice(&plain).ok())
-                .unwrap_or_default(),
+            Ok(sealed) => {
+                reseal = protector.needs_reseal(&sealed);
+                protector
+                    .unprotect(&sealed)
+                    .ok()
+                    .and_then(|plain| serde_json::from_slice(&plain).ok())
+                    .unwrap_or_default()
+            }
             Err(_) => StoredLocalSendState::default(),
         };
 
         let identity = match decode_stored_identity(&stored) {
-            Some(id) => id,
+            Some(id) => {
+                // Written in plain by an older build: protect it now.
+                if reseal && let Err(e) = save_stored_state(data_dir, &*protector, &stored) {
+                    tracing::warn!(error = %e, "can't reseal the LocalSend identity");
+                }
+                id
+            }
             None => {
                 let id = generate_self_signed_identity()?;
                 stored.cert_der_hex = data_encoding::HEXLOWER.encode(&id.cert_der);
