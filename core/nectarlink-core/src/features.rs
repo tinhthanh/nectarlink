@@ -439,13 +439,10 @@ pub fn compute(device: DeviceId, inputs: MatrixInputs<'_>) -> CapabilityMatrix {
                         // Windows retains its existing app-view matrix.
                         if def.id == "mirroring.app_windows"
                             && desktop.os == "macos"
-                            && result.0 == FeatureState::Available
+                            && result == FeatureState::Available
                             && !phone.caps.contains("mirror.app_windows_owned_v1")
                         {
-                            (
-                                FeatureState::Unsupported { reason: UnsupportedReason::NotOnThisDevice },
-                                None,
-                            )
+                            FeatureState::Unsupported { reason: UnsupportedReason::NotOnThisDevice }
                         } else {
                             result
                         }
