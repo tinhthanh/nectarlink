@@ -109,6 +109,7 @@ fun SettingsScreen(
     updater: AppUpdater,
     onSetStorageEnabled: (pcId: String, enabled: Boolean) -> Unit = { _, _ -> },
     onSetMicEnabled: (pcId: String, enabled: Boolean) -> Unit = { _, _ -> },
+    onSetMirroringEnabled: (pcId: String, enabled: Boolean) -> Unit = { _, _ -> },
     startWithoutAsking: Set<String> = emptySet(),
     onSetStartWithoutAsking: (pcId: String, on: Boolean) -> Unit = { _, _ -> },
     onAddSafFolder: (Uri) -> Unit = {},
@@ -530,6 +531,23 @@ fun SettingsScreen(
                                 )
                             }
                             if (!device.isAndroid) {
+                                val mirroringToggleTitle = stringResource(R.string.mirroring_pc_toggle)
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                                        Text(mirroringToggleTitle, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            stringResource(R.string.mirroring_pc_toggle_hint),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = device.mirroringEnabled,
+                                        onCheckedChange = { enabled -> onSetMirroringEnabled(device.id, enabled) },
+                                        colors = app.nectarlink.android.ui.theme.nectarSwitchColors(),
+                                        modifier = Modifier.semantics { contentDescription = mirroringToggleTitle },
+                                    )
+                                }
                                 val micToggleTitle = stringResource(R.string.mic_pc_toggle)
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                                     Column(Modifier.weight(1f).padding(end = 12.dp)) {

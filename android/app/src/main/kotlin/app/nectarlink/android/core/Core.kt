@@ -453,7 +453,7 @@ class Core(context: Context, private val scope: CoroutineScope) : EventListener 
             localsendMulticast?.runCatching { if (lsEnabled) acquire() else release() }
             pruneOldTempCaches()
             _state.update {
-                it.withDevices(devices, pcToggles.storageAllowed, pcToggles.micOff).copy(
+                it.withDevices(devices, pcToggles.storageAllowed, pcToggles.micOff, pcToggles.mirroringOff).copy(
                     status = CoreStatus.Ready(started.deviceId()),
                     sendQueue = initialQueue,
                     clipboardHistoryEnabled = clipHistEnabled,
@@ -754,7 +754,11 @@ class Core(context: Context, private val scope: CoroutineScope) : EventListener 
                             localNetwork = localNetwork,
                             devices = if (pcToggles != null) {
                                 it.devices.map { d ->
-                                    d.copy(storageEnabled = d.id in pcToggles.storageAllowed, micEnabled = d.id !in pcToggles.micOff)
+                                    d.copy(
+                                        storageEnabled = d.id in pcToggles.storageAllowed,
+                                        micEnabled = d.id !in pcToggles.micOff,
+                                        mirroringEnabled = d.id !in pcToggles.mirroringOff,
+                                    )
                                 }
                             } else {
                                 it.devices
@@ -1194,18 +1198,34 @@ class Core(context: Context, private val scope: CoroutineScope) : EventListener 
         }
     }
 
-    /** Which PCs may browse this phone's storage, and which may not ask for its microphone. */
-    private class PerPcToggles(val storageAllowed: Set<String>, val micOff: Set<String>)
+    /**
+     * Lets [pcId] show this phone's screen, or not (on by default). Turning it off
+     * makes the phone refuse that PC's mirroring requests.
+     */
+    fun setMirroringEnabled(pcId: String, enabled: Boolean) {
+        _state.update { it.withMirroringEnabled(pcId, enabled) }
+        scope.launch(Dispatchers.IO) {
+            startJob?.join()
+            val currentNode = node ?: return@launch
+            runCatching { currentNode.setDeviceToggle(pcId, MIRRORING_TOGGLE, enabled) }
+                .onFailure { Log.w(TAG, "can't change the mirroring toggle", it) }
+        }
+    }
+
+    /** Which PCs may browse this phone's storage, and which may not ask for its microphone or screen. */
+    private class PerPcToggles(val storageAllowed: Set<String>, val micOff: Set<String>, val mirroringOff: Set<String>)
 
     private fun perPcToggles(node: NectarlinkNode, ids: List<String>): PerPcToggles {
         val storage = mutableSetOf<String>()
         val micOff = mutableSetOf<String>()
+        val mirroringOff = mutableSetOf<String>()
         for (id in ids) {
             val toggles = runCatching { node.deviceToggles(id) }.getOrNull() ?: continue
             if (toggles.any { it.name == PhoneStorage.TOGGLE_NAME && it.enabled }) storage += id
             if (toggles.any { it.name == app.nectarlink.android.mic.MicService.TOGGLE_NAME && !it.enabled }) micOff += id
+            if (toggles.any { it.name == MIRRORING_TOGGLE && !it.enabled }) mirroringOff += id
         }
-        return PerPcToggles(storage, micOff)
+        return PerPcToggles(storage, micOff, mirroringOff)
     }
 
     fun clearWebcamRequest(pcId: String? = null) {
@@ -2533,6 +2553,8 @@ class Core(context: Context, private val scope: CoroutineScope) : EventListener 
 
     private companion object {
         const val TAG = "Nectarlink"
+        /** The per-PC toggle the core checks before it shows this phone's screen. */
+        const val MIRRORING_TOGGLE = "mirroring"
         /** Offered while notification access is granted (docs/protocol/capabilities.md). */
         val NOTIFICATION_CAPABILITIES = listOf("notify.mirror", "notify.reply", "notify.live")
         /** Sharing this phone's players, which also needs notification access. */

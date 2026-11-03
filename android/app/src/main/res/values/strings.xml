@@ -469,6 +469,8 @@
     <string name="storage_saf_hint">Share only the folders you pick.</string>
     <string name="storage_add_folder">Add folder</string>
     <string name="storage_remove_folder">Remove</string>
+    <string name="mirroring_pc_toggle">Show this phone’s screen on this PC</string>
+    <string name="mirroring_pc_toggle_hint">On by default. Turn it off and this PC can’t mirror the screen.</string>
     <string name="storage_pc_toggle">Browse this phone’s storage in File Explorer</string>
     <string name="storage_pc_toggle_hint">Off by default. Lets this PC list, open, upload, rename and delete your shared files.</string>
     <string name="storage_request_title">%1$s wants to browse this phone’s storage</string>
