@@ -27,6 +27,13 @@ fi
 
 PROFILE="${PROFILE:-release}"
 BUNDLE_ID="${BUNDLE_ID:-app.nectarlink.desktop}"
+# A self-signed "NectarLink Local Signing" identity in the login keychain keeps
+# the same signature across builds on this Mac, so the keychain item's "Always
+# Allow" sticks; without one, an ad-hoc signature (a new one each build).
+LOCAL_IDENTITY="NectarLink Local Signing"
+if [[ -z "${SIGN_IDENTITY:-}" ]] && security find-identity -p codesigning 2>/dev/null | grep -q "\"${LOCAL_IDENTITY}\""; then
+    SIGN_IDENTITY="${LOCAL_IDENTITY}"
+fi
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 DIST_DIR="${DIST_DIR:-${REPO_ROOT}/target/macos}"
 APP="${DIST_DIR}/NectarLink.app"
@@ -107,6 +114,17 @@ cat > "${APP}/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# The phone app, so plugging in a phone without NectarLink can install it
+# from here (desktop/app/src/usb_setup.rs). PHONE_APK overrides the build.
+PHONE_APK="${PHONE_APK:-${REPO_ROOT}/android/app/build/outputs/apk/release/app-release.apk}"
+[[ -f "${PHONE_APK}" ]] || PHONE_APK="${REPO_ROOT}/android/app/build/outputs/apk/debug/app-debug.apk"
+if [[ -f "${PHONE_APK}" ]]; then
+    cp "${PHONE_APK}" "${APP}/Contents/Resources/nectarlink.apk"
+    echo "==> Phone app: ${PHONE_APK#"${REPO_ROOT}/"}"
+else
+    echo "==> No phone app built (android/): the USB card can't install it"
+fi
+
 echo "==> Bundling Qt (${MACDEPLOYQT})"
 # Homebrew splits Qt into one keg per module; QT_INSTALL_LIBS links them all.
 "${MACDEPLOYQT}" "${APP}" -qmldir="${DESKTOP_DIR}/qml" -libpath="$("${QMAKE}" -query QT_INSTALL_LIBS)" -verbose=1
@@ -131,8 +149,9 @@ while IFS= read -r link; do
 done < <(find "${APP}/Contents/Resources/qml" -type l ! -exec test -e {} \; -print)
 
 echo "==> Signing (${SIGN_IDENTITY})"
-if [[ "${SIGN_IDENTITY}" == "-" ]]; then
-    codesign --force --deep --sign - "${APP}"
+if [[ "${SIGN_IDENTITY}" == "-" || "${SIGN_IDENTITY}" == "${LOCAL_IDENTITY}" ]]; then
+    # Hardened runtime and a timestamp are for Developer ID and notarization.
+    codesign --force --deep --sign "${SIGN_IDENTITY}" "${APP}"
 else
     codesign --force --deep --options runtime --timestamp --sign "${SIGN_IDENTITY}" "${APP}"
 fi
