@@ -171,7 +171,6 @@ struct Shared {
     /// Fetching adb by itself happened (once per run).
     auto_adb: bool,
     auto_opened: HashMap<String, Instant>,
-    last: Option<View>,
 }
 
 fn shared() -> std::sync::MutexGuard<'static, Shared> {
@@ -188,14 +187,14 @@ fn runtime() -> &'static tokio::runtime::Runtime {
 
 /// Starts the worker that keeps `usbSetup` up to date.
 pub fn start(qt: CxxQtThread<AppController>) {
+    tracing::info!("usb setup worker started");
+    // What this controller was last given: each one keeps its own, or a second
+    // controller's worker would see no change and leave the one on screen stale.
+    let mut last: Option<View> = None;
     let _ = std::thread::Builder::new().name("usb-setup".into()).spawn(move || loop {
         let view = std::panic::catch_unwind(gather).unwrap_or_default();
-        let changed = {
-            let mut s = shared();
-            let changed = s.last.as_ref() != Some(&view);
-            s.last = Some(view.clone());
-            changed
-        };
+        let changed = last.as_ref() != Some(&view);
+        last = Some(view.clone());
         if changed {
             tracing::info!(
                 adb = view.adb,
