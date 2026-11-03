@@ -53,6 +53,7 @@ const QML: &[&str] = &[
     "qml/components/TransferItem.qml",
     "qml/components/ValueSlider.qml",
     "qml/components/SwitchBar.qml",
+    "qml/components/PhoneAccessCard.qml",
     "qml/components/Txt.qml",
     "qml/components/UsbSetupCard.qml",
     "qml/pages/AppsPage.qml",

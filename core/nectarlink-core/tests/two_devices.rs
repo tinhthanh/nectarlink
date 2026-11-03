@@ -5453,7 +5453,7 @@ async fn two_profiles_on_one_phone_each_get_their_own_usb_port() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn usb_auto_pair_requires_consent_on_both_sides_and_connects_over_usb() {
+async fn usb_auto_pair_pairs_over_the_cable_without_a_code() {
     use nectarlink_core::ConnectionPath;
 
     let mut phone = start_usb_device("Pixel USB", DeviceKind::Phone, Some(0), &[]).await;
@@ -5465,88 +5465,29 @@ async fn usb_auto_pair_requires_consent_on_both_sides_and_connects_over_usb() {
 
     pc.node.connect_usb_tunnel(tunnel_addr).await.expect("connect USB tunnel");
 
-    // 1. Both PC and Phone emit NodeEvent::Discovered for each other.
-    let mut pc_saw_discovered = false;
-    let mut pc_code: Option<String> = None;
-    while !pc_saw_discovered || pc_code.is_none() {
-        let ev = wait_for(&mut pc, "pc discovered + sas code", |e| Some(e.clone())).await;
-        match ev {
-            NodeEvent::Discovered(d) if d.id == phone_id => pc_saw_discovered = true,
-            NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if peer == phone_id => {
-                pc_code = Some(code);
-            }
-            _ => {}
-        }
-    }
-
-    let mut phone_saw_discovered = false;
-    let mut phone_code: Option<String> = None;
-    while !phone_saw_discovered || phone_code.is_none() {
-        let ev = wait_for(&mut phone, "phone discovered + sas code", |e| Some(e.clone())).await;
-        match ev {
-            NodeEvent::Discovered(d) if d.id == pc_id => phone_saw_discovered = true,
-            NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if peer == pc_id => {
-                phone_code = Some(code);
-            }
-            _ => {}
-        }
-    }
-
-    // 2. Both emitted matching 6-digit SAS codes without calling pairing_start_qr or pairing_start_nearby.
-    let code_a = pc_code.unwrap();
-    let code_b = phone_code.unwrap();
-    assert_eq!(code_a.len(), 6);
-    assert_eq!(code_a, code_b);
-
-    // 3. Before user confirmation on both sides, neither device is paired.
-    assert!(pc.node.paired_devices().unwrap().is_empty());
-    assert!(phone.node.paired_devices().unwrap().is_empty());
-
-    // 4. Declining on one side aborts pairing and keeps paired_devices() empty on both sides.
-    phone.node.pairing_confirm(false).unwrap();
-    let phone_fail = wait_for(&mut phone, "phone pairing declined", |e| match e {
-        NodeEvent::Pairing(PairingEvent::Failed(r)) => Some(r.clone()),
-        _ => None,
-    })
-    .await;
-    let pc_fail = wait_for(&mut pc, "pc pairing rejected", |e| match e {
-        NodeEvent::Pairing(PairingEvent::Failed(r)) => Some(r.clone()),
-        _ => None,
-    })
-    .await;
-    assert_eq!(phone_fail, PairingFailure::Declined);
-    assert_eq!(pc_fail, PairingFailure::Rejected);
-    assert!(pc.node.paired_devices().unwrap().is_empty());
-    assert!(phone.node.paired_devices().unwrap().is_empty());
-
-    // 5. Re-triggering over USB (via refresh) starts a fresh SAS prompt; confirming on both sides pairs
-    //    and connects with ConnectionPath::Usb.
-    pc.node.refresh().await;
-    let code_pc_2 = wait_for(&mut pc, "pc second sas code", |e| match e {
-        NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if *peer == phone_id => Some(code.clone()),
-        _ => None,
-    })
-    .await;
-    let code_phone_2 = wait_for(&mut phone, "phone second sas code", |e| match e {
-        NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if *peer == pc_id => Some(code.clone()),
-        _ => None,
-    })
-    .await;
-    assert_eq!(code_pc_2, code_phone_2);
-
-    pc.node.pairing_confirm(true).unwrap();
-    phone.node.pairing_confirm(true).unwrap();
-
+    // 1. Over the cable both sides pair by themselves: adb already vouches for
+    //    the PC, so neither shows a code to compare (no SasCode before Paired).
+    let mut pc_saw_code = false;
     wait_for(&mut pc, "pc paired over usb", |e| match e {
+        NodeEvent::Pairing(PairingEvent::SasCode { .. }) => {
+            pc_saw_code = true;
+            None
+        }
         NodeEvent::Pairing(PairingEvent::Paired(d)) if d.id == phone_id => Some(()),
         _ => None,
     })
     .await;
+    let mut phone_saw_code = false;
     wait_for(&mut phone, "phone paired over usb", |e| match e {
+        NodeEvent::Pairing(PairingEvent::SasCode { .. }) => {
+            phone_saw_code = true;
+            None
+        }
         NodeEvent::Pairing(PairingEvent::Paired(d)) if d.id == pc_id => Some(()),
         _ => None,
     })
     .await;
+    assert!(!pc_saw_code && !phone_saw_code, "no code is shown over the cable");
 
     wait_for(&mut pc, "pc online over usb", |e| match e {
         NodeEvent::LinkChanged { device, link: LinkState::Online { path: ConnectionPath::Usb, .. } }
@@ -5567,7 +5508,7 @@ async fn usb_auto_pair_requires_consent_on_both_sides_and_connects_over_usb() {
     })
     .await;
 
-    // 6. Plugged in, the link stays up: the phone lets the PC dial through the cable instead
+    // 2. Plugged in, the link stays up: the phone lets the PC dial through the cable instead
     //    of racing it, so neither side sees its connection replaced and dropped.
     let settle = tokio::time::Instant::now() + std::time::Duration::from_secs(8);
     let mut drops = 0;
@@ -5615,21 +5556,7 @@ async fn usb_transport_carries_features_when_wifi_unavailable() {
     let tunnel_addr: SocketAddr = ("127.0.0.1".parse::<std::net::IpAddr>().unwrap(), usb_port).into();
     pc.node.connect_usb_tunnel(tunnel_addr).await.expect("connect USB tunnel");
 
-    let code_pc = wait_for(&mut pc, "pc sas code", |e| match e {
-        NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if *peer == phone_id => Some(code.clone()),
-        _ => None,
-    })
-    .await;
-    let code_phone = wait_for(&mut phone, "phone sas code", |e| match e {
-        NodeEvent::Pairing(PairingEvent::SasCode { peer, code }) if *peer == pc_id => Some(code.clone()),
-        _ => None,
-    })
-    .await;
-    assert_eq!(code_pc, code_phone);
-
-    pc.node.pairing_confirm(true).unwrap();
-    phone.node.pairing_confirm(true).unwrap();
-
+    // Over the cable the two pair by themselves (no code to compare).
     wait_for(&mut pc, "pc online over usb", |e| match e {
         NodeEvent::LinkChanged { device, link: LinkState::Online { path: ConnectionPath::Usb, .. } }
             if *device == phone_id =>

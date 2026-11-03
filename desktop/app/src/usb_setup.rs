@@ -64,6 +64,22 @@ const UIA2_APKS: [(&str, &str); 2] = [
         "e6f729287d72351388fd66597c35b69988b9091a7011954bf92a55d416cb1e1c",
     ),
 ];
+/// What NectarLink may use on the phone, granted from this PC over adb so the
+/// phone shows no prompts: (id, runtime permissions, extra grant, extra revoke).
+const ACCESS: [(&str, &[&str], &str, &str); 6] = [
+    (
+        "notifications",
+        &["POST_NOTIFICATIONS"],
+        "cmd notification allow_listener app.nectarlink/app.nectarlink.android.notifications.NotificationListener",
+        "cmd notification disallow_listener app.nectarlink/app.nectarlink.android.notifications.NotificationListener",
+    ),
+    ("calls", &["READ_PHONE_STATE", "READ_CALL_LOG", "CALL_PHONE", "ANSWER_PHONE_CALLS", "READ_CONTACTS"], "", ""),
+    ("messages", &["READ_SMS", "SEND_SMS", "READ_CONTACTS"], "", ""),
+    ("photos", &["READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO", "READ_EXTERNAL_STORAGE"], "", ""),
+    ("cameraMic", &["CAMERA", "RECORD_AUDIO"], "", ""),
+    ("background", &[], "cmd deviceidle whitelist +app.nectarlink", "cmd deviceidle whitelist -app.nectarlink"),
+];
+
 /// How long the "is mobile-lite registered" answer is trusted.
 const CLAUDE_CHECK_TTL: Duration = Duration::from_secs(60);
 
@@ -96,6 +112,8 @@ struct Phone {
     app: &'static str,
     /// Whether the UiAutomator2 server Claude reads the screen with is on it.
     claude_ready: bool,
+    /// Each [`ACCESS`] group and whether it's granted (only with the app on it).
+    access: HashMap<&'static str, bool>,
     busy: bool,
     error: String,
 }
@@ -110,6 +128,7 @@ struct Shared {
     /// When each phone was first seen waiting for its app, and last opened.
     waiting_since: HashMap<String, Instant>,
     uia2: HashMap<String, (bool, Instant)>,
+    access: HashMap<String, (HashMap<&'static str, bool>, Instant)>,
     claude: Option<(bool, bool, Instant)>,
     auto_opened: HashMap<String, Instant>,
     last: Option<View>,
@@ -194,12 +213,14 @@ fn gather() -> View {
             shared().waiting_since.remove(&device.serial);
         }
         let claude_ready = device.is_online() && uia2_installed(&device.serial);
+        let access = if app == "installed" { access_of(&device.serial) } else { HashMap::new() };
         let s = shared();
         view.phones.push(Phone {
             model: device.model.clone().unwrap_or_default().replace('_', " "),
             state: device.state.clone(),
             app,
             claude_ready,
+            access,
             busy: s.busy.get(&device.serial).copied().unwrap_or(false),
             error: s.errors.get(&device.serial).cloned().unwrap_or_default(),
             serial: device.serial,
@@ -300,10 +321,16 @@ pub fn act(serial: String, action: String) {
     let _ = std::thread::Builder::new().name("usb-setup-action".into()).spawn(move || {
         let result = match action.as_str() {
             "download-adb" => download_adb(),
-            "install" => install_apk(&serial).and_then(|()| open_app(&serial)),
+            // Posting notifications is what the app shows its connection in, so
+            // it never asks; reading them and the rest are chosen on the access card.
+            "install" => install_apk(&serial)
+                .and_then(|()| shell(&serial, &format!("pm grant {PACKAGE} android.permission.POST_NOTIFICATIONS")).map(drop))
+                .and_then(|()| open_app(&serial)),
             "open" => open_app(&serial),
             "reconnect" => reconnect(),
             "claude" => set_up_claude(&serial),
+            a if a.starts_with("allow:") => set_access(&serial, &a[6..], true),
+            a if a.starts_with("deny:") => set_access(&serial, &a[5..], false),
             _ => Ok(()),
         };
         let mut s = shared();
@@ -317,6 +344,7 @@ pub fn act(serial: String, action: String) {
             s.busy.remove(&serial);
             s.apps.remove(&serial);
             s.uia2.remove(&serial);
+            s.access.remove(&serial);
             s.claude = None;
             if let Err(e) = result {
                 tracing::warn!(serial, action, error = e, "usb setup action failed");
@@ -324,6 +352,52 @@ pub fn act(serial: String, action: String) {
             }
         }
     });
+}
+
+/// Which [`ACCESS`] groups the phone grants NectarLink now.
+fn access_of(serial: &str) -> HashMap<&'static str, bool> {
+    if let Some((access, at)) = shared().access.get(serial).cloned()
+        && at.elapsed() < APP_CHECK_TTL
+    {
+        return access;
+    }
+    let Ok(dump) = shell(serial, &format!("dumpsys package {PACKAGE} | grep 'permission.*granted='")) else {
+        return HashMap::new();
+    };
+    let listeners = shell(serial, "settings get secure enabled_notification_listeners").unwrap_or_default();
+    let whitelist = shell(serial, "cmd deviceidle whitelist").unwrap_or_default();
+    let granted = |perm: &str| dump.contains(&format!("android.permission.{perm}: granted=true"));
+    let declared = |perm: &str| dump.contains(&format!("android.permission.{perm}:"));
+    let access: HashMap<&'static str, bool> = ACCESS
+        .iter()
+        .map(|(id, perms, _, _)| {
+            let runtime = perms.iter().filter(|p| declared(p)).all(|p| granted(p));
+            let extra = match *id {
+                "notifications" => listeners.contains(PACKAGE),
+                "background" => whitelist.contains(PACKAGE),
+                _ => true,
+            };
+            (*id, runtime && extra)
+        })
+        .collect();
+    shared().access.insert(serial.to_owned(), (access.clone(), Instant::now()));
+    access
+}
+
+/// Grants or revokes one [`ACCESS`] group on the phone.
+fn set_access(serial: &str, id: &str, allow: bool) -> Result<(), String> {
+    let (_, perms, grant, revoke) = ACCESS.iter().find(|(g, ..)| *g == id).ok_or("unknown access")?;
+    let verb = if allow { "grant" } else { "revoke" };
+    for perm in perms.iter() {
+        // A permission this Android doesn't have (READ_MEDIA_* before 13) fails; that's fine.
+        let _ = shell(serial, &format!("pm {verb} {PACKAGE} android.permission.{perm}"));
+    }
+    let extra = if allow { grant } else { revoke };
+    if !extra.is_empty() {
+        shell(serial, extra)?;
+    }
+    tracing::info!(serial, id, allow, "changed NectarLink's access on the phone");
+    Ok(())
 }
 
 fn open_app(serial: &str) -> Result<(), String> {

@@ -1154,6 +1154,14 @@ FocusScope {
                             spacing: 14
                             visible: walkthrough.step === 4
 
+                            // A phone on the cable: choose its permissions here and this
+                            // PC grants them, so it shows no prompts (PhoneAccessCard.qml).
+                            PhoneAccessCard {
+                                Layout.fillWidth: true
+                                implicitWidth: 520
+                                always: true
+                            }
+
                             // B.4: Read-only two-column summary when no phone is paired yet
                             ColumnLayout {
                                 Layout.fillWidth: true

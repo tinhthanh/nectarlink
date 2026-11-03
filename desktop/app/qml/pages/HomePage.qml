@@ -410,6 +410,11 @@ Item {
                 width: column.width
             }
 
+            // What NectarLink may use on that phone, while something is still off.
+            PhoneAccessCard {
+                width: column.width
+            }
+
             // Claude on a phone on the cable: the UiAutomator2 server mobile-lite reads the
             // screen with, and mobile-lite registered with Claude Code (usb_setup.rs).
             Card {

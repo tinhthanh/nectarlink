@@ -274,7 +274,8 @@ pub(crate) async fn start_nearby(shared: &Arc<Shared>, peer: DeviceId) -> Result
 
         // We are A (initiator), the host is B.
         let code = proto::sas_code(&n_a, &nonce.n_b, &shared.id, &peer);
-        exchange_decisions(shared, peer, code, &mut send, &mut recv, Role::Initiator).await?;
+        let confirm = if shared.is_usb_connection(&conn) { Confirm::Cable } else { Confirm::User };
+        exchange_decisions(shared, peer, code, &mut send, &mut recv, Role::Initiator, confirm).await?;
         finish_initiator(&conn, send).await?;
         Ok(nonce.device.sanitized())
     }
@@ -433,7 +434,8 @@ async fn accept_nearby(
     }
     // The initiator is A, we are B.
     let code = proto::sas_code(&reveal.n_a, &n_b, &peer, &shared.id);
-    exchange_decisions(shared, peer, code, send, recv, Role::Host).await?;
+    let confirm = if is_usb { Confirm::Cable } else { Confirm::User };
+    exchange_decisions(shared, peer, code, send, recv, Role::Host, confirm).await?;
     shared.pairing.end_host();
     Ok(Some(peer_device))
 }
@@ -448,9 +450,22 @@ enum Role {
     Host,
 }
 
+/// Who confirms the code on this side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Confirm {
+    /// The local user compares the 6-digit code.
+    User,
+    /// The session runs over the USB cable: the phone reaches this PC through
+    /// adb, which the phone's owner already allowed for this PC, and nothing
+    /// can sit between the two ends of a cable. The code is confirmed here
+    /// without showing it.
+    Cable,
+}
+
 /// Shows the 6-digit code and exchanges both users' decisions. Watches the
 /// peer while waiting for the local user, so a decline on the other device
-/// ends the comparison right away.
+/// ends the comparison right away. Over the cable this side confirms by
+/// itself ([`Confirm::Cable`]).
 async fn exchange_decisions(
     shared: &Arc<Shared>,
     peer: DeviceId,
@@ -458,9 +473,20 @@ async fn exchange_decisions(
     send: &mut SendStream,
     recv: &mut RecvStream,
     role: Role,
+    confirm: Confirm,
 ) -> Result<()> {
-    let decision = shared.pairing.await_decision(peer)?;
-    shared.emit(NodeEvent::Pairing(PairingEvent::SasCode { peer, code }));
+    let decision: std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<bool, tokio::sync::oneshot::error::RecvError>> + Send>> =
+        match confirm {
+            Confirm::User => {
+                let decision = shared.pairing.await_decision(peer)?;
+                shared.emit(NodeEvent::Pairing(PairingEvent::SasCode { peer, code }));
+                Box::pin(decision)
+            }
+            Confirm::Cable => {
+                tracing::info!(peer = %peer.short(), "pairing over the USB cable: no code to compare");
+                Box::pin(std::future::ready(Ok(true)))
+            }
+        };
 
     let mut decision = Box::pin(tokio::time::timeout(SAS_DECISION_TIMEOUT, decision));
     // Created once: reading a frame isn't cancel-safe, so it must not be
