@@ -880,6 +880,7 @@ impl Store {
                 params![peer.as_bytes().as_slice(), i64::from(enabled)],
             )?;
             tx.commit()?;
+            self.toggle_cache().remove(peer);
             Ok(true)
         })?;
         if !committed {
@@ -2657,6 +2658,19 @@ mod tests {
         assert!(store.remove_peer(&id).unwrap());
         assert!(!store.remove_peer(&id).unwrap());
         assert!(store.list_peers().unwrap().is_empty());
+    }
+
+    #[test]
+    fn phone_control_grant_shows_at_once() {
+        let store = Store::in_memory().unwrap();
+        let id = DeviceId([4; 32]);
+        store.upsert_peer(&id, &info("Mac"), 1).unwrap();
+        // Read once so the toggles are cached before the grant.
+        assert_eq!(store.toggle(&id, "phone_control").unwrap(), None);
+        store.compare_and_set_phone_control_grant(None, "{}", &id, true).unwrap();
+        assert_eq!(store.toggle(&id, "phone_control").unwrap(), Some(true));
+        store.compare_and_set_phone_control_grant(Some("{}"), "{\"v\":2}", &id, false).unwrap();
+        assert_eq!(store.toggle(&id, "phone_control").unwrap(), Some(false));
     }
 
     #[test]
