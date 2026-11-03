@@ -147,6 +147,10 @@ pub fn compute_capabilities(
         }
         caps.push(nectarlink_core::MIC_LISTEN.into());
     }
+    // The mirror window decodes with VideoToolbox; input goes to the phone,
+    // which injects it itself (Elevated or its accessibility service).
+    #[cfg(target_os = "macos")]
+    caps.push(nectarlink_core::MIRROR_VIEW.into());
     #[cfg(any(windows, target_os = "linux"))]
     let mut pc_mirror_enabled = crate::pc_mirror::is_active();
     #[cfg(any(windows, target_os = "linux"))]
@@ -438,7 +442,7 @@ mod tests {
     fn macos_advertises_only_supported_capabilities() {
         let caps = compute_capabilities(None);
         // Ensure unsupported features on macOS are never advertised
-        assert!(!caps.contains(&"mirror.view".into()), "macOS must not advertise mirror.view");
+        assert!(caps.contains(&"mirror.view".into()), "macOS shows the phone's screen");
         assert!(!caps.contains(&"mirror.listen".into()), "macOS must not advertise mirror.listen");
         assert!(!caps.contains(&"media.control".into()), "macOS must not advertise media.control");
         assert!(
