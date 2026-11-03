@@ -194,7 +194,7 @@ impl qobject::Mirror {
         let windows: Vec<serde_json::Value> = mirror::windows()
             .into_iter()
             .map(|(window, shown)| {
-                let (control, can_screen_off, name) = hub.read(|s| {
+                let (control, can_screen_off, name, on_usb) = hub.read(|s| {
                     // The screen needs control turned on; app windows are Elevated already.
                     let feature = if window.session == MIRROR_SCREEN {
                         "mirroring.control"
@@ -205,7 +205,14 @@ impl qobject::Mirror {
                     let control = matrix.and_then(|m| m.state(feature)) == Some(FeatureState::Available);
                     let can_screen_off = matrix.and_then(|m| m.state("mirroring.app_windows"))
                         == Some(FeatureState::Available);
-                    (control, can_screen_off, s.name_of(&window.device).unwrap_or_default())
+                    // On the cable an Elevated phone shows its screen without asking.
+                    let on_usb = s.device(&window.device).is_some_and(|d| {
+                        matches!(
+                            d.link,
+                            nectarlink_core::LinkState::Online { path: nectarlink_core::ConnectionPath::Usb, .. }
+                        )
+                    });
+                    (control, can_screen_off, s.name_of(&window.device).unwrap_or_default(), on_usb)
                 });
                 let (phase, reason) = match shown.phase {
                     Phase::Asking => ("asking", String::new()),
@@ -232,6 +239,7 @@ impl qobject::Mirror {
                     "phase": phase,
                     "reason": reason,
                     "canControl": control,
+                    "onUsb": on_usb,
                     // An app window has the phone's sound while it plays here (#121).
                     "sound": if window.session == MIRROR_SCREEN {
                         mirror::has_sound(&window.device)

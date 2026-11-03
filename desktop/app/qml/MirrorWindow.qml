@@ -569,7 +569,8 @@ Window {
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 role: "title"
-                text: win.phase === "asking" ? (win.info.app ? qsTr("Opening %1").arg(win.info.title) : qsTr("Allow it on your phone"))
+                text: win.phase === "asking" ? (win.info.app ? qsTr("Opening %1").arg(win.info.title)
+                                                : win.info.onUsb === true ? qsTr("Starting…") : qsTr("Allow it on your phone"))
                     : win.phase === "ended" ? (win.info.app ? qsTr("%1 closed").arg(win.info.title) : qsTr("Mirroring stopped"))
                     : qsTr("Starting…")
             }
@@ -579,7 +580,7 @@ Window {
                 wrapMode: Text.WordWrap
                 role: "body"
                 muted: true
-                text: win.phase === "asking" && !win.info.app
+                text: win.phase === "asking" && !win.info.app && win.info.onUsb !== true
                       ? qsTr("Tap the notification on %1, then choose to share the entire screen.").arg(win.deviceName)
                       : win.phase === "ended" ? ((win.info.reason || "").length > 0 ? win.info.reason
                                                 : win.info.app ? qsTr("The app closed on %1.").arg(win.deviceName)
