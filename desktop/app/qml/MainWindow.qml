@@ -10,21 +10,6 @@ NativeWindow {
     id: window
 
     readonly property bool showWalkthrough: AppController.status === "ready" && !Preferences.walkthroughCompleted
-    // A new install opens on Home, where the Phone on USB card leads: plugging the
-    // phone in is the setup. Only an untouched first walkthrough is skipped, once
-    // per start, so "Setup walkthrough" still opens it.
-    property bool firstRunChecked: false
-    function skipFirstWalkthrough() {
-        if (firstRunChecked || AppController.status !== "ready")
-            return
-        firstRunChecked = true
-        if (!Preferences.walkthroughCompleted && Preferences.walkthroughStep === 0)
-            Preferences.walkthroughCompleted = true
-    }
-    Connections {
-        target: AppController
-        function onStatusChanged() { window.skipFirstWalkthrough() }
-    }
     readonly property bool welcome: AppController.status !== "ready" || showWalkthrough
     property string page: AppController.currentPage.length > 0 ? AppController.currentPage : "home"
     property string pendingSettingsSection: ""
@@ -412,7 +397,6 @@ NativeWindow {
         }
     }
     Component.onCompleted: {
-        window.skipFirstWalkthrough()
         followBackdrop()
         if (!window.activeFocusItem && window.contentItem)
             window.contentItem.forceActiveFocus()

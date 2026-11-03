@@ -695,7 +695,11 @@ impl Settings {
         }
         let text = match read {
             Ok(text) => text,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Settings::default(),
+            // A new install opens on Home, where the Phone on USB card is the
+            // setup; "Setup walkthrough" still opens the walkthrough.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return Settings { walkthrough_completed: true, ..Settings::default() };
+            }
             Err(e) => {
                 tracing::warn!(error = %e, "can't read settings; using defaults");
                 return Settings::default();
@@ -1074,9 +1078,11 @@ mod tests {
     fn walkthrough_first_run_resume_skip_and_upgrade_with_paired_device() {
         let dir = tempfile::tempdir().unwrap();
 
-        // 1. First run: no paired devices, walkthrough_completed == false, step == 0.
+        // 1. First run skips the walkthrough (the Phone on USB card on Home is the setup);
+        //    one reopened from "Setup walkthrough" starts at step 0.
         let mut first_run = Settings::load(dir.path());
-        assert!(!first_run.walkthrough_completed);
+        assert!(first_run.walkthrough_completed);
+        first_run.walkthrough_completed = false;
         assert_eq!(first_run.walkthrough_step, 0);
         assert!(!first_run.reconcile_walkthrough_for_paired_devices(0));
         assert!(!first_run.walkthrough_completed);
