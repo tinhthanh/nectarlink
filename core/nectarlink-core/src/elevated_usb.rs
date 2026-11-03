@@ -100,10 +100,17 @@ async fn launch(
         .map_err(|_| "the helper didn't start in time".to_owned())?
         .map_err(|e| e.to_string())?;
     let port = parse_ready(&first).ok_or_else(|| format!("the helper said {:?}", first.trim()))?;
-    // Holding the shell keeps the helper running; its output is only drained.
+    // Holding the shell keeps the helper running. What it prints after
+    // `ready` is why something it serves failed, so it goes to the log.
     let keep = tokio::spawn(async move {
-        let mut sink = [0u8; 1024];
-        while matches!(output.read(&mut sink).await, Ok(n) if n > 0) {}
+        let mut line = String::new();
+        loop {
+            line.clear();
+            match output.read_line(&mut line).await {
+                Ok(0) | Err(_) => break,
+                Ok(_) => tracing::info!(peer = %peer.short(), "elevated helper: {}", line.trim_end()),
+            }
+        }
     });
     if let Some(old) = shared.usb_helpers.lock().unwrap_or_else(|e| e.into_inner()).insert(peer, keep) {
         old.abort();

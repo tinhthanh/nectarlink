@@ -44,6 +44,8 @@ class AppDisplay(
     @Volatile private var size = Triple(width, height, dpi)
     private var lastRotationCheck = 0L
     private var display: VirtualDisplay? = null
+    /** The full-screen mirror where the shell may not make a virtual display. */
+    private var surfaceMirror: SurfaceControlMirror? = null
 
     /** The display's ID, once made. */
     var displayId: Int = -1
@@ -62,13 +64,19 @@ class AppDisplay(
             val first = createEncoder(curW, curH)
             codec = first.codec
             surface = first.surface
-            val made = if (fullScreen) {
-                createMirrorDisplay(curW, curH, curDpi, first.surface)
+            val made: VirtualDisplay? = if (fullScreen) {
+                // Some Android 13 builds want CAPTURE_VIDEO_OUTPUT for any
+                // virtual display the shell makes; scrcpy's way still works.
+                runCatching { createMirrorDisplay(curW, curH, curDpi, first.surface) }.getOrElse {
+                    System.err.println("virtual display refused, mirroring through SurfaceControl: $it")
+                    surfaceMirror = SurfaceControlMirror(curW, curH, first.surface)
+                    null
+                }
             } else {
                 createDisplay(curW, curH, curDpi, first.surface)
             }
             display = made
-            displayId = if (fullScreen) 0 else made.display.displayId
+            displayId = if (fullScreen) 0 else made!!.display.displayId
             if (!fullScreen) {
                 hideIme(displayId)
             }
@@ -96,8 +104,12 @@ class AppDisplay(
                 codec = next.codec
                 surface = next.surface
                 codecForKeyframes = next.codec
-                made.resize(newW, newH, newDpi)
-                made.surface = next.surface
+                if (made != null) {
+                    made.resize(newW, newH, newDpi)
+                    made.surface = next.surface
+                } else {
+                    surfaceMirror?.show(newW, newH, next.surface)
+                }
                 curW = newW
                 curH = newH
                 curDpi = newDpi
@@ -112,6 +124,8 @@ class AppDisplay(
             runCatching { surface?.release() }
             display?.release()
             display = null
+            surfaceMirror?.release()
+            surfaceMirror = null
         }
     }
 
@@ -574,4 +588,52 @@ private object UserActivity {
 
     /** PowerManager.USER_ACTIVITY_FLAG_NO_CHANGE_LIGHTS: the screen may still dim. */
     private const val NO_CHANGE_LIGHTS = 1
+}
+
+/**
+ * The phone's screen drawn into [surface] the way scrcpy does it: a
+ * SurfaceControl display showing layer stack 0, scaled to the encoder's size.
+ */
+private class SurfaceControlMirror(w: Int, h: Int, surface: Surface) {
+    private val sc = Class.forName("android.view.SurfaceControl")
+    private val token: android.os.IBinder
+
+    init {
+        // A secure display needs a permission the shell lacks from Android 12.
+        val secure = Build.VERSION.SDK_INT < Build.VERSION_CODES.R
+        token = sc.getMethod("createDisplay", String::class.java, Boolean::class.javaPrimitiveType)
+            .invoke(null, "NectarlinkScreen", secure) as android.os.IBinder
+        show(w, h, surface)
+    }
+
+    /** Points the display at [surface], [w]×[h], showing the whole screen. */
+    fun show(w: Int, h: Int, surface: Surface) {
+        val (screenW, screenH) = screenSize()
+        sc.getMethod("openTransaction").invoke(null)
+        try {
+            sc.getMethod("setDisplaySurface", android.os.IBinder::class.java, Surface::class.java).invoke(null, token, surface)
+            sc.getMethod(
+                "setDisplayProjection",
+                android.os.IBinder::class.java,
+                Int::class.javaPrimitiveType,
+                android.graphics.Rect::class.java,
+                android.graphics.Rect::class.java,
+            ).invoke(null, token, 0, android.graphics.Rect(0, 0, screenW, screenH), android.graphics.Rect(0, 0, w, h))
+            sc.getMethod("setDisplayLayerStack", android.os.IBinder::class.java, Int::class.javaPrimitiveType).invoke(null, token, 0)
+        } finally {
+            sc.getMethod("closeTransaction").invoke(null)
+        }
+    }
+
+    fun release() {
+        runCatching { sc.getMethod("destroyDisplay", android.os.IBinder::class.java).invoke(null, token) }
+    }
+
+    /** The built-in display's size as it's turned now. */
+    private fun screenSize(): Pair<Int, Int> {
+        val global = Class.forName("android.hardware.display.DisplayManagerGlobal")
+        val instance = global.getMethod("getInstance").invoke(null)
+        val info = global.getMethod("getDisplayInfo", Int::class.javaPrimitiveType).invoke(instance, 0)
+        return info.javaClass.getField("logicalWidth").getInt(info) to info.javaClass.getField("logicalHeight").getInt(info)
+    }
 }
