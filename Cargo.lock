@@ -2495,6 +2495,7 @@ dependencies = [
  "hostname",
  "libc",
  "material-colors",
+ "nectarlink-adb",
  "nectarlink-core",
  "nectarlink-vcam",
  "pkg-config",

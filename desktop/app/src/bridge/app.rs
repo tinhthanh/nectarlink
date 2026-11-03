@@ -72,6 +72,10 @@ pub mod qobject {
         #[qproperty(QString, doctor_checks)]
         /// Checking, or fixing.
         #[qproperty(bool, doctor_busy)]
+        /// Plugged-in phones and what each still needs, as JSON (usb_setup.rs):
+        /// { adb, adbError, canDownloadAdb, hasApk, usbConnected,
+        ///   phones: [{ serial, model, state, app, busy, error }] }.
+        #[qproperty(QString, usb_setup)]
         /// This copy updates itself (it's installed).
         #[qproperty(bool, can_update)]
         /// A newer version that's available ("" when none).
@@ -328,6 +332,10 @@ pub mod qobject {
         /// "reconnect"), then checks again.
         #[qinvokable]
         fn doctor_fix(self: Pin<&mut AppController>, fix: &QString);
+        /// A button on the USB card ("download-adb", "install", "open",
+        /// "reconnect") for one plugged-in phone.
+        #[qinvokable]
+        fn usb_setup_action(self: Pin<&mut AppController>, serial: &QString, action: &QString);
 
         /// Checks for an update now and says what it found.
         #[qinvokable]
@@ -434,6 +442,7 @@ pub struct AppControllerRust {
     version: QString,
     doctor_checks: QString,
     doctor_busy: bool,
+    usb_setup: QString,
     can_update: bool,
     update_version: QString,
     update_busy: bool,
@@ -820,6 +829,7 @@ impl cxx_qt::Initialize for qobject::AppController {
             }
         });
         super::subscribe(qt.clone(), Changes::CONTINUITY, Self::refresh_continuity);
+        crate::usb_setup::start(qt.clone());
         super::subscribe(qt.clone(), Changes::PALETTE, Self::refresh_palette);
         super::subscribe(qt.clone(), Changes::LOCALSEND | Changes::STATUS, Self::refresh_localsend_state);
         super::subscribe(
@@ -1792,6 +1802,10 @@ impl qobject::AppController {
 
     pub fn install_update(self: Pin<&mut Self>) {
         install_update_in_background();
+    }
+
+    pub fn usb_setup_action(self: Pin<&mut Self>, serial: &QString, action: &QString) {
+        crate::usb_setup::act(serial.to_string(), action.to_string());
     }
 
     pub fn run_doctor(mut self: Pin<&mut Self>) {

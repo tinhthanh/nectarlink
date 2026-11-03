@@ -56,6 +56,7 @@ mod state;
 mod storage;
 mod transfers;
 mod updater;
+mod usb_setup;
 mod webcam;
 #[cfg(windows)]
 mod win;
