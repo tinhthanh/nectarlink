@@ -1,0 +1,96 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Our own builds of custom/main: the phone app (signed with the debug key the
+# phones already have, so it installs over them) and the Windows installer,
+# which carries that app for the USB card to install.
+name: Custom build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [custom/main]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  QT_VERSION: "6.12.0"
+
+jobs:
+  android:
+    name: Android app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the pinned Rust toolchain and the Android targets
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add aarch64-linux-android armv7-linux-androideabi
+      - name: Install cargo-ndk
+        run: cargo install --locked cargo-ndk
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: "16111833"
+          packages: "platforms;android-37.0 ndk;30.0.16248370 build-tools;37.0.0"
+      - uses: gradle/actions/setup-gradle@v6
+      - name: The debug key the phones already have
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::warning::ANDROID_DEBUG_KEYSTORE isn't set: this app won't install over one built elsewhere"
+          else
+            mkdir -p ~/.android && echo "$KEYSTORE" | base64 -d > ~/.android/debug.keystore
+          fi
+      - name: Build
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug -Pnectarlink.abis=arm64-v8a,armeabi-v7a
+      - name: Forget the key
+        if: always()
+        run: rm -f ~/.android/debug.keystore
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  windows:
+    name: Windows installer (x64)
+    needs: android
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: android
+          path: phone
+      - name: Install the pinned Rust toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          cache: true
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and
+              -not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) {
+            choco install nsis --yes --no-progress
+          }
+      - name: Build the installer
+        shell: pwsh
+        env:
+          PHONE_APK: ${{ github.workspace }}\phone\app-debug.apk
+        run: ./scripts/package.ps1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: target/package/*-setup.exe

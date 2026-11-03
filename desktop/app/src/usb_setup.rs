@@ -53,6 +53,20 @@ const PLATFORM_TOOLS: (&str, &str) = (
 #[cfg(not(any(target_os = "macos", windows)))]
 const PLATFORM_TOOLS: (&str, &str) = ("", "");
 
+/// Appium's UiAutomator2 server, which Claude's mobile-lite MCP reads the
+/// screen with; pinned like mobile-mcp's scripts/setup.sh.
+const UIA2_PACKAGE: &str = "io.appium.uiautomator2.server";
+const UIA2_URL: &str = "https://github.com/appium/appium-uiautomator2-server/releases/download/v10.6.6";
+const UIA2_APKS: [(&str, &str); 2] = [
+    ("appium-uiautomator2-server-v10.6.6.apk", "8ff760a2a86b487f53090fbdcd5b0360e67d02bb811887d527a9557b0d59c80d"),
+    (
+        "appium-uiautomator2-server-debug-androidTest.apk",
+        "e6f729287d72351388fd66597c35b69988b9091a7011954bf92a55d416cb1e1c",
+    ),
+];
+/// How long the "is mobile-lite registered" answer is trusted.
+const CLAUDE_CHECK_TTL: Duration = Duration::from_secs(60);
+
 #[derive(Serialize, Clone, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
 struct View {
@@ -65,6 +79,9 @@ struct View {
     has_apk: bool,
     /// A paired phone is connected over USB right now.
     usb_connected: bool,
+    /// Claude Code is installed here, and mobile-lite is registered with it.
+    claude_installed: bool,
+    claude_registered: bool,
     phones: Vec<Phone>,
 }
 
@@ -77,6 +94,8 @@ struct Phone {
     state: String,
     /// "missing", "installed", "unknown".
     app: &'static str,
+    /// Whether the UiAutomator2 server Claude reads the screen with is on it.
+    claude_ready: bool,
     busy: bool,
     error: String,
 }
@@ -90,6 +109,8 @@ struct Shared {
     apps: HashMap<String, (bool, Instant)>,
     /// When each phone was first seen waiting for its app, and last opened.
     waiting_since: HashMap<String, Instant>,
+    uia2: HashMap<String, (bool, Instant)>,
+    claude: Option<(bool, bool, Instant)>,
     auto_opened: HashMap<String, Instant>,
     last: Option<View>,
 }
@@ -146,8 +167,11 @@ fn gather() -> View {
         can_download_adb: !PLATFORM_TOOLS.0.is_empty(),
         has_apk: apk_path().is_some(),
         usb_connected: usb_connected(),
+        claude_installed: false,
+        claude_registered: false,
         phones: Vec::new(),
     };
+    (view.claude_installed, view.claude_registered) = claude_status();
     if !adb {
         return view;
     }
@@ -169,11 +193,13 @@ fn gather() -> View {
         } else {
             shared().waiting_since.remove(&device.serial);
         }
+        let claude_ready = device.is_online() && uia2_installed(&device.serial);
         let s = shared();
         view.phones.push(Phone {
             model: device.model.clone().unwrap_or_default().replace('_', " "),
             state: device.state.clone(),
             app,
+            claude_ready,
             busy: s.busy.get(&device.serial).copied().unwrap_or(false),
             error: s.errors.get(&device.serial).cloned().unwrap_or_default(),
             serial: device.serial,
@@ -270,6 +296,7 @@ pub fn act(serial: String, action: String) {
             "install" => install_apk(&serial).and_then(|()| open_app(&serial)),
             "open" => open_app(&serial),
             "reconnect" => reconnect(),
+            "claude" => set_up_claude(&serial),
             _ => Ok(()),
         };
         let mut s = shared();
@@ -282,6 +309,8 @@ pub fn act(serial: String, action: String) {
         } else {
             s.busy.remove(&serial);
             s.apps.remove(&serial);
+            s.uia2.remove(&serial);
+            s.claude = None;
             if let Err(e) = result {
                 tracing::warn!(serial, action, error = e, "usb setup action failed");
                 s.errors.insert(serial, e);
@@ -302,10 +331,16 @@ fn reconnect() -> Result<(), String> {
     })
 }
 
-/// Streams the APK to the phone's package manager (`adb install`, streamed).
+/// Installs the NectarLink APK this PC carries.
 fn install_apk(serial: &str) -> Result<(), String> {
     let path = apk_path().ok_or("This PC has no NectarLink app for phones to install.")?;
-    let apk = std::fs::read(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+    install_file(serial, &path, "")
+}
+
+/// Streams an APK to the phone's package manager (`adb install`, streamed);
+/// `flags` go before `-S` (`-t` for a test APK).
+fn install_file(serial: &str, path: &Path, flags: &str) -> Result<(), String> {
+    let apk = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let out = runtime().block_on(async {
         let run = async {
             let mut stream =
@@ -313,7 +348,7 @@ fn install_apk(serial: &str) -> Result<(), String> {
             nectarlink_adb::send_command(&mut stream, &format!("host:transport:{serial}"))
                 .await
                 .map_err(|e| e.to_string())?;
-            nectarlink_adb::send_command(&mut stream, &format!("exec:cmd package install -r -S {}", apk.len()))
+            nectarlink_adb::send_command(&mut stream, &format!("exec:cmd package install -r {flags} -S {}", apk.len()))
                 .await
                 .map_err(|e| e.to_string())?;
             stream.write_all(&apk).await.map_err(|e| e.to_string())?;
@@ -325,7 +360,7 @@ fn install_apk(serial: &str) -> Result<(), String> {
         tokio::time::timeout(Duration::from_secs(180), run).await.map_err(|_| "timed out".to_owned())?
     })?;
     if out.contains("Success") {
-        tracing::info!(serial, "installed NectarLink over USB");
+        tracing::info!(serial, apk = %path.display(), "installed over USB");
         Ok(())
     } else {
         Err(out.trim().to_owned())
@@ -342,6 +377,111 @@ fn apk_path() -> Option<PathBuf> {
     }
     let exe_dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
     [exe_dir.join("nectarlink.apk"), exe_dir.join("../Resources/nectarlink.apk")].into_iter().find(|p| p.is_file())
+}
+
+// ---- Claude -----------------------------------------------------------------------------
+
+fn uia2_installed(serial: &str) -> bool {
+    if let Some((installed, at)) = shared().uia2.get(serial).copied()
+        && at.elapsed() < APP_CHECK_TTL
+    {
+        return installed;
+    }
+    let installed = shell(serial, &format!("pm list packages {UIA2_PACKAGE}")).is_ok_and(|out| {
+        let has = |pkg: String| out.lines().any(|l| l.trim() == pkg);
+        has(format!("package:{UIA2_PACKAGE}")) && has(format!("package:{UIA2_PACKAGE}.test"))
+    });
+    shared().uia2.insert(serial.to_owned(), (installed, Instant::now()));
+    installed
+}
+
+/// (Claude Code found, mobile-lite registered with it), checked once a minute.
+fn claude_status() -> (bool, bool) {
+    if let Some((installed, registered, at)) = shared().claude
+        && at.elapsed() < CLAUDE_CHECK_TTL
+    {
+        return (installed, registered);
+    }
+    let installed = find_tool("claude").is_some();
+    let registered = installed && mobile_lite_registered();
+    shared().claude = Some((installed, registered, Instant::now()));
+    (installed, registered)
+}
+
+/// Installs UiAutomator2 on the phone and registers mobile-lite with Claude
+/// Code, so Claude can see and use this phone (mobile-mcp's setup, from here).
+fn set_up_claude(serial: &str) -> Result<(), String> {
+    let dir = tools_dir().ok_or("NectarLink isn't ready yet")?.join("uiautomator2");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    for (name, sha256) in UIA2_APKS {
+        let file = dir.join(name);
+        if !file.is_file() || sha256_of(&file)? != sha256 {
+            fetch(&format!("{UIA2_URL}/{name}"), &file)?;
+            let got = sha256_of(&file)?;
+            if got != sha256 {
+                let _ = std::fs::remove_file(&file);
+                return Err(format!("{name} didn't match the expected checksum ({got})"));
+            }
+        }
+        install_file(serial, &file, "-t")?;
+    }
+    register_mobile_lite()
+}
+
+/// Whether Claude Code's user config has mobile-lite (`claude mcp get` would
+/// start the server to check its health, too much for a poll).
+fn mobile_lite_registered() -> bool {
+    let Some(config) = dirs::home_dir().map(|h| h.join(".claude.json")) else { return false };
+    std::fs::read_to_string(config)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .is_some_and(|json| json.get("mcpServers").and_then(|m| m.get("mobile-lite")).is_some())
+}
+
+fn register_mobile_lite() -> Result<(), String> {
+    let claude = find_tool("claude").ok_or("Install Claude Code first, then try again.")?;
+    if mobile_lite_registered() {
+        return Ok(());
+    }
+    let server = mobile_mcp_dir()
+        .map(|d| d.join("lib").join("index.js"))
+        .filter(|p| p.is_file())
+        .ok_or("mobile-mcp isn't built here: set MOBILE_MCP_DIR to its folder (with lib/index.js).")?;
+    let node = find_tool("node").ok_or("Install Node.js first, then try again.")?;
+    let status = hidden(Command::new(&claude).args(["mcp", "add", "-s", "user", "mobile-lite", "--"]).arg(node).arg(server))
+        .status()
+        .map_err(|e| e.to_string())?;
+    if status.success() { Ok(()) } else { Err(format!("claude mcp add failed ({status})")) }
+}
+
+/// mobile-mcp's checkout: `MOBILE_MCP_DIR`, or where it lives on this Mac.
+fn mobile_mcp_dir() -> Option<PathBuf> {
+    if let Some(dir) = std::env::var_os("MOBILE_MCP_DIR") {
+        return Some(PathBuf::from(dir));
+    }
+    let home = dirs::home_dir()?;
+    [home.join("Documents/research-repo/mobile-dev-tools/mobile-mcp"), home.join("mobile-mcp")]
+        .into_iter()
+        .find(|d| d.join("lib").join("index.js").is_file())
+}
+
+/// A program on the PATH or where installers put it (a GUI app on macOS
+/// doesn't get the shell's PATH).
+fn find_tool(name: &str) -> Option<PathBuf> {
+    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH").map(|p| std::env::split_paths(&p).collect()).unwrap_or_default();
+    if let Some(home) = dirs::home_dir() {
+        dirs.push(home.join(".local/bin"));
+        dirs.push(home.join(".claude/local"));
+        dirs.push(home.join("AppData/Roaming/npm"));
+    }
+    dirs.push(PathBuf::from("/opt/homebrew/bin"));
+    dirs.push(PathBuf::from("/usr/local/bin"));
+    let names: Vec<String> = if cfg!(windows) {
+        vec![format!("{name}.exe"), format!("{name}.cmd")]
+    } else {
+        vec![name.to_owned()]
+    };
+    dirs.into_iter().flat_map(|d| names.iter().map(move |n| d.join(n))).find(|p| p.is_file())
 }
 
 // ---- adb --------------------------------------------------------------------------------

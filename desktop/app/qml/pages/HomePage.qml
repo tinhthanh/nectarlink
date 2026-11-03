@@ -554,6 +554,63 @@ Item {
                 }
             }
 
+            // Claude on a phone on the cable: the UiAutomator2 server mobile-lite reads the
+            // screen with, and mobile-lite registered with Claude Code (usb_setup.rs).
+            Card {
+                id: claudeCard
+                width: column.width
+                padding: 16
+                readonly property var phones: (usbCard.usb.phones || []).filter(p =>
+                    p.state === "device" && (!p.claudeReady || !usbCard.usb.claudeRegistered))
+                visible: usbCard.usb.claudeInstalled === true && phones.length > 0
+
+                Column {
+                    width: parent.width
+                    spacing: 12
+                    Txt { role: "title"; text: qsTr("Claude on your phone") }
+                    Repeater {
+                        model: claudeCard.phones
+                        delegate: Item {
+                            required property var modelData
+                            readonly property var phone: modelData
+                            width: claudeCard.width - 32
+                            height: Math.max(claudeText.implicitHeight, claudeButton.implicitHeight)
+                            Column {
+                                id: claudeText
+                                anchors.left: parent.left
+                                anchors.right: claudeButton.left
+                                anchors.rightMargin: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 4
+                                Txt {
+                                    width: parent.width
+                                    wrapMode: Text.WordWrap
+                                    text: qsTr("Let Claude Code see and use %1: installs Appium's UiAutomator2 server on the phone and adds the mobile-lite tools to Claude Code.")
+                                          .arg(phone.model.length > 0 ? phone.model : qsTr("this phone"))
+                                }
+                                Txt {
+                                    width: parent.width
+                                    visible: phone.error.length > 0
+                                    role: "bodySmall"
+                                    color: Theme.error
+                                    wrapMode: Text.WordWrap
+                                    text: phone.error
+                                }
+                            }
+                            Button {
+                                id: claudeButton
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                size: "sm"
+                                busy: phone.busy
+                                text: phone.busy ? qsTr("Setting up…") : qsTr("Set up Claude control")
+                                onClicked: AppController.usbSetupAction(phone.serial, "claude")
+                            }
+                        }
+                    }
+                }
+            }
+
             // Card shown when no phone is paired yet (for example after skipping first-run setup).
             Card {
                 width: column.width

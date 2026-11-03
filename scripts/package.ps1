@@ -132,6 +132,11 @@ if (Test-Path $stage) {
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item $exe $stage
 Copy-Item $vcamDll $stage
+# The phone app, so plugging in a phone without NectarLink can install it
+# from here (desktop/app/src/usb_setup.rs).
+if ($env:PHONE_APK -and (Test-Path $env:PHONE_APK)) {
+    Copy-Item $env:PHONE_APK (Join-Path $stage 'nectarlink.apk')
+}
 
 Invoke-Native "windeployqt" {
     $deployArgs = @(
