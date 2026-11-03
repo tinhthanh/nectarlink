@@ -209,7 +209,8 @@ fn gather() -> View {
 }
 
 /// Opens NectarLink on a phone that has it but hasn't connected over USB for a
-/// few seconds (just updated, restarted, or stopped): plugging in is enough.
+/// few seconds and isn't running it (just updated, restarted, or stopped):
+/// plugging in is enough.
 fn auto_open(serial: &str) {
     let due = {
         let mut s = shared();
@@ -222,10 +223,16 @@ fn auto_open(serial: &str) {
         }
         due
     };
-    if due {
+    // Only when it isn't running: a running app may be pairing (a new PC has
+    // nothing to connect to yet), and bringing it forward would end that.
+    if due && !app_running(serial) {
         tracing::info!(serial, "opening NectarLink on the plugged-in phone");
         act(serial.to_owned(), "open".to_owned());
     }
+}
+
+fn app_running(serial: &str) -> bool {
+    shell(serial, &format!("pidof {PACKAGE}")).is_ok_and(|out| !out.trim().is_empty())
 }
 
 /// Phones on a cable; adb also lists wireless-debugging and emulator serials.
