@@ -107,7 +107,7 @@ FocusScope {
     readonly property var stepSubtitles: [
         "Your Android phone and your PC, working together on your local network.",
         "No accounts, no cloud servers, and no telemetry.",
-        "Get the Android app from GitHub Releases or install the APK over USB.",
+        "Plug your phone in with USB: this PC installs and opens the app for you. Or get it from GitHub Releases.",
         "Scan the QR code from the NectarLink Android app, or pick your phone from nearby devices.",
         "Safe features are on by default. Higher-trust access stays off until you turn it on.",
         "Three quick checks so notifications and discovery work reliably on your PC.",
@@ -926,6 +926,14 @@ FocusScope {
                             Layout.fillWidth: true
                             spacing: 12
                             visible: walkthrough.step === 2
+
+                            // Easiest: plug the phone in. This PC gets adb, installs the
+                            // app over the cable and opens it (components/UsbSetupCard.qml).
+                            UsbSetupCard {
+                                Layout.fillWidth: true
+                                implicitWidth: 520
+                                howToWhenEmpty: true
+                            }
 
                             Rectangle {
                                 Layout.fillWidth: true

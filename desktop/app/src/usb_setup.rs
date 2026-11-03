@@ -499,7 +499,11 @@ fn ensure_adb_server() -> bool {
         return true;
     }
     let Some(adb) = find_adb() else { return false };
-    let started = hidden(Command::new(&adb).arg("start-server")).status().is_ok_and(|s| s.success());
+    // ADB_MDNS=0: no mDNS discovery (wireless debugging, which this doesn't
+    // use), so adb listens on loopback only and Windows Firewall doesn't ask.
+    let started = hidden(Command::new(&adb).arg("start-server").env("ADB_MDNS", "0"))
+        .status()
+        .is_ok_and(|s| s.success());
     if !started {
         tracing::warn!(adb = %adb.display(), "adb start-server failed");
     }

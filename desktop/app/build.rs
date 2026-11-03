@@ -54,6 +54,7 @@ const QML: &[&str] = &[
     "qml/components/ValueSlider.qml",
     "qml/components/SwitchBar.qml",
     "qml/components/Txt.qml",
+    "qml/components/UsbSetupCard.qml",
     "qml/pages/AppsPage.qml",
     "qml/pages/CallsPage.qml",
     "qml/pages/DeckPage.qml",
