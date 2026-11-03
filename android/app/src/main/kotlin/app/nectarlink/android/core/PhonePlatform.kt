@@ -89,6 +89,8 @@ internal class PhonePlatform(
     private val nameOf: (String) -> String = { "" },
     /** Notifies when a PC starts or stops typing on this phone without mirroring. */
     private val onKeyboardFromPc: (String, Boolean) -> Unit = { _, _ -> },
+    /** Whether a PC is connected over the USB cable right now. */
+    private val isOnUsb: (String) -> Boolean = { false },
 ) : Platform {
     private val context = context.applicationContext
 
@@ -141,9 +143,12 @@ internal class PhonePlatform(
     override fun contacts(query: String?, offset: UInt, limit: UInt): List<Contact> =
         contacts().list(query, offset.toInt(), limit.toInt())
 
+    // Elevated shows the screen without asking, so only to a PC on the cable;
+    // over Wi-Fi the phone asks first (a notification, then Android's prompt).
     override fun mirrorRequested(pcId: String, options: MirrorOptions): Boolean =
         if (options.app != null) {
-            appWindows.open(pcId, options)
+            // App windows need Elevated and have nothing to ask with.
+            isOnUsb(pcId) && appWindows.open(pcId, options)
         } else {
             // Kept within what the encoder can take: a zero or huge value from
             // the PC would only make this mirroring fail to start.
@@ -157,7 +162,9 @@ internal class PhonePlatform(
                 options.screenOff,
                 options.soundOnly,
             )
-            if (Elevated.running && MirrorService.startElevated(context, request)) {
+            val onUsb = isOnUsb(pcId)
+            android.util.Log.i("MirrorService", "mirror requested: elevated=${Elevated.running} usb=$onUsb")
+            if (Elevated.running && onUsb && MirrorService.startElevated(context, request)) {
                 true
             } else {
                 onMirror(pcId, request)

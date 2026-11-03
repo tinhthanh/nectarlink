@@ -111,7 +111,10 @@ object InputServer {
             add(arrayOf("cmd", "notification", "allow_dnd", PKG))
             add(arrayOf("appops", "set", PKG, "WRITE_SETTINGS", "allow"))
             add(arrayOf("appops", "set", PKG, "READ_CLIPBOARD_IN_BACKGROUND", "allow"))
-            add(arrayOf("appops", "set", PKG, "PROJECT_MEDIA", "allow"))
+            // Back to asking: the helper captures the screen itself, and a
+            // MediaProjection fallback must show Android's own prompt (an
+            // older build allowed it, which let any paired PC skip it).
+            add(arrayOf("appops", "set", PKG, "PROJECT_MEDIA", "default"))
         }
         for (cmd in commands) {
             runCatching { Runtime.getRuntime().exec(cmd).waitFor() }

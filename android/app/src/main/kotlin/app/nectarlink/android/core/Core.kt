@@ -158,6 +158,7 @@ class Core(context: Context, private val scope: CoroutineScope) : EventListener 
         appWindows = AppWindows(this.context, scope, open = { pc -> mirrorOpen(pc) }, nameOf = { pc -> _state.value.nameOf(pc).orEmpty() }),
         nameOf = { pc -> _state.value.nameOf(pc).orEmpty() },
         onKeyboardFromPc = { pc, on -> setKeyboardFromPc(pc, on) },
+        isOnUsb = { pc -> (_state.value.devices.firstOrNull { it.id == pc }?.link as? Link.Online)?.usb == true },
     )
     private val storage = PhoneStorage(this.context) { path ->
         enqueueNotificationOp { it.storageChanged(path) }

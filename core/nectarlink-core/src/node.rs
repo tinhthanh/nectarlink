@@ -40,6 +40,9 @@ use crate::{
     transfer,
 };
 
+/// How long a session that finds the USB cable may stay on another path.
+const USB_SWITCH_GRACE: Duration = Duration::from_secs(3);
+
 const DIAL_TIMEOUT: Duration = Duration::from_secs(15);
 const BACKOFF_MIN: Duration = Duration::from_secs(1);
 /// The longest wait between redials of an offline device. Waking for a
@@ -807,6 +810,16 @@ impl Shared {
                 if let Some(session) = s.session(&peer) {
                     s.publish_online(&session);
                     s.refresh_capabilities(&peer);
+                    // The cable beats Wi-Fi. Give QUIC a moment to move onto it,
+                    // then drop a session still elsewhere so the redial takes it.
+                    tokio::time::sleep(USB_SWITCH_GRACE).await;
+                    if lock(&s.usb_peers).contains_key(&peer)
+                        && let Some(session) = s.session(&peer)
+                        && session.path() != ConnectionPath::Usb
+                    {
+                        tracing::info!(peer = %peer.short(), "moving the session onto the USB cable");
+                        session.close(CLOSE_NORMAL, b"usb");
+                    }
                 } else {
                     s.wake_supervisor(&peer);
                 }
