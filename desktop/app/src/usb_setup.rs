@@ -33,6 +33,10 @@ const MAIN_ACTIVITY: &str = "app.nectarlink/app.nectarlink.android.ui.MainActivi
 const POLL: Duration = Duration::from_secs(2);
 /// How long a phone's "is NectarLink installed" answer is trusted.
 const APP_CHECK_TTL: Duration = Duration::from_secs(10);
+/// How long a phone with NectarLink installed may stay unconnected over USB
+/// before the app is opened on it from here, and how often that's retried.
+const AUTO_OPEN_AFTER: Duration = Duration::from_secs(6);
+const AUTO_OPEN_EVERY: Duration = Duration::from_secs(60);
 
 /// Google's platform-tools r37.0.1; SHA-1 checked against Google's
 /// repository2-3.xml, SHA-256 pinned here.
@@ -84,6 +88,9 @@ struct Shared {
     busy: HashMap<String, bool>,
     errors: HashMap<String, String>,
     apps: HashMap<String, (bool, Instant)>,
+    /// When each phone was first seen waiting for its app, and last opened.
+    waiting_since: HashMap<String, Instant>,
+    auto_opened: HashMap<String, Instant>,
     last: Option<View>,
 }
 
@@ -149,8 +156,19 @@ fn gather() -> View {
         .ok()
         .and_then(Result::ok)
         .unwrap_or_default();
+    let plugged: Vec<String> = devices.iter().map(|d| d.serial.clone()).collect();
+    {
+        let mut s = shared();
+        s.waiting_since.retain(|serial, _| plugged.contains(serial));
+        s.auto_opened.retain(|serial, _| plugged.contains(serial));
+    }
     for device in devices.into_iter().filter(is_usb_phone) {
         let app = if device.is_online() { app_installed(&device.serial) } else { "unknown" };
+        if app == "installed" && !view.usb_connected {
+            auto_open(&device.serial);
+        } else {
+            shared().waiting_since.remove(&device.serial);
+        }
         let s = shared();
         view.phones.push(Phone {
             model: device.model.clone().unwrap_or_default().replace('_', " "),
@@ -162,6 +180,26 @@ fn gather() -> View {
         });
     }
     view
+}
+
+/// Opens NectarLink on a phone that has it but hasn't connected over USB for a
+/// few seconds (just updated, restarted, or stopped): plugging in is enough.
+fn auto_open(serial: &str) {
+    let due = {
+        let mut s = shared();
+        let since = *s.waiting_since.entry(serial.to_owned()).or_insert_with(Instant::now);
+        let recent = s.auto_opened.get(serial).is_some_and(|at| at.elapsed() < AUTO_OPEN_EVERY);
+        let busy = s.busy.get(serial).copied().unwrap_or(false);
+        let due = since.elapsed() >= AUTO_OPEN_AFTER && !recent && !busy;
+        if due {
+            s.auto_opened.insert(serial.to_owned(), Instant::now());
+        }
+        due
+    };
+    if due {
+        tracing::info!(serial, "opening NectarLink on the plugged-in phone");
+        act(serial.to_owned(), "open".to_owned());
+    }
 }
 
 /// Phones on a cable; adb also lists wireless-debugging and emulator serials.

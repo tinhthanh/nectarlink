@@ -51,6 +51,8 @@ object InputServer {
     // The installed package, so a build with an applicationIdSuffix (".dev")
     // grants itself and gets the attach broadcast, not the release app.
     private const val PKG = app.nectarlink.android.BuildConfig.APPLICATION_ID
+    /** BatteryManager.BATTERY_PLUGGED_USB: a computer's USB port. */
+    private const val BATTERY_PLUGGED_USB = 2
 
     private val windows = java.util.Collections.synchronizedSet(LinkedHashSet<AppDisplay>())
     @Volatile private var serverSocket: ServerSocket? = null
@@ -68,6 +70,7 @@ object InputServer {
             rawArg
         }
         grantAppOps()
+        stayAwakeOnUsb()
         startClipboardWatcher()
         val injector = runCatching { Injector() }.getOrElse { return fail("can't inject input: $it") }
         val server = runCatching { ServerSocket(0, 8, InetAddress.getLoopbackAddress()) }.getOrElse { return fail("can't listen: $it") }
@@ -97,6 +100,26 @@ object InputServer {
             val client = runCatching { server.accept() }.getOrNull() ?: continue
             Thread { serve(client, token, injector) }.start()
         }
+    }
+
+    /**
+     * Keeps the screen on while the phone is plugged into a computer's USB
+     * port (Settings > Developer options > Stay awake, USB only), so a PC
+     * on the cable keeps reaching it. A wall charger is a different source,
+     * so the phone still sleeps there. Wakes the screen now as well.
+     */
+    private fun stayAwakeOnUsb() {
+        runCatching {
+            val get = Runtime.getRuntime().exec(arrayOf("settings", "get", "global", "stay_on_while_plugged_in"))
+            val current = get.inputStream.bufferedReader().readText().trim().toIntOrNull() ?: 0
+            get.waitFor()
+            if ((current and BATTERY_PLUGGED_USB) == 0) {
+                Runtime.getRuntime()
+                    .exec(arrayOf("settings", "put", "global", "stay_on_while_plugged_in", (current or BATTERY_PLUGGED_USB).toString()))
+                    .waitFor()
+            }
+            Runtime.getRuntime().exec(arrayOf("input", "keyevent", "KEYCODE_WAKEUP")).waitFor()
+        }.onFailure { System.err.println("can't keep the screen on over USB: $it") }
     }
 
     private fun grantAppOps() {
