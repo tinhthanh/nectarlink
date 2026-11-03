@@ -197,6 +197,13 @@ pub fn start(qt: CxxQtThread<AppController>) {
             changed
         };
         if changed {
+            tracing::info!(
+                adb = view.adb,
+                cabled = view.cabled.len(),
+                phones = ?view.phones.iter().map(|p| (p.state.as_str(), p.app)).collect::<Vec<_>>(),
+                usb_connected = view.usb_connected,
+                "usb setup"
+            );
             let json = serde_json::to_string(&view).unwrap_or_else(|_| "{}".into());
             if qt.queue(move |object| object.set_usb_setup(QString::from(&json))).is_err() {
                 return;
@@ -332,7 +339,11 @@ fn cable_phones() -> Vec<(String, String, &'static str)> {
         return phones;
     }
     let phones = list_cable_phones();
-    shared().cable = Some((phones.clone(), Instant::now()));
+    let mut s = shared();
+    if s.cable.as_ref().is_none_or(|(before, _)| before != &phones) {
+        tracing::info!(phones = ?phones.iter().map(|(_, name, _)| name).collect::<Vec<_>>(), "phones on the USB cable");
+    }
+    s.cable = Some((phones.clone(), Instant::now()));
     phones
 }
 
@@ -343,8 +354,16 @@ fn maker_of(vendor: u16) -> Option<&'static str> {
 /// Windows: media (MTP) devices `pnputil` lists as connected, by vendor ID.
 #[cfg(windows)]
 fn list_cable_phones() -> Vec<(String, String, &'static str)> {
-    let Ok(out) = hidden(Command::new("pnputil").args(["/enum-devices", "/connected", "/class", "WPD"])).output() else {
-        return Vec::new();
+    let out = match hidden(Command::new("pnputil").args(["/enum-devices", "/connected", "/class", "WPD"])).output() {
+        Ok(out) if out.status.success() => out,
+        Ok(out) => {
+            tracing::warn!(status = %out.status, stderr = %String::from_utf8_lossy(&out.stderr), "pnputil failed");
+            return Vec::new();
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "can't run pnputil");
+            return Vec::new();
+        }
     };
     let text = String::from_utf8_lossy(&out.stdout);
     let mut phones = Vec::new();
