@@ -80,6 +80,29 @@ const ACCESS: [(&str, &[&str], &str, &str); 6] = [
     ("background", &[], "cmd deviceidle whitelist +app.nectarlink", "cmd deviceidle whitelist -app.nectarlink"),
 ];
 
+/// USB vendor IDs of Android phone makers, to see a phone on the cable before
+/// USB debugging is on (it shows up as a media device, not in adb).
+const ANDROID_VENDORS: [(u16, &str); 16] = [
+    (0x18d1, "google"),
+    (0x04e8, "samsung"),
+    (0x2717, "xiaomi"),
+    (0x19d2, "zte"),
+    (0x22d9, "oppo"),
+    (0x2d95, "vivo"),
+    (0x12d1, "huawei"),
+    (0x22b8, "motorola"),
+    (0x1004, "lg"),
+    (0x2a70, "oneplus"),
+    (0x0bb4, "htc"),
+    (0x0fce, "sony"),
+    (0x17ef, "lenovo"),
+    (0x2a45, "meizu"),
+    (0x1ebf, "coolpad"),
+    (0x0e8d, "mediatek"),
+];
+/// How often the cable is looked at for phones without USB debugging.
+const CABLE_POLL: Duration = Duration::from_secs(3);
+
 /// How long the "is mobile-lite registered" answer is trusted.
 const CLAUDE_CHECK_TTL: Duration = Duration::from_secs(60);
 
@@ -93,12 +116,22 @@ struct View {
     can_download_adb: bool,
     /// Whether this PC carries a NectarLink APK to install.
     has_apk: bool,
+    /// Phones on the cable that adb doesn't see yet (USB debugging is off).
+    cabled: Vec<Cabled>,
     /// A paired phone is connected over USB right now.
     usb_connected: bool,
     /// Claude Code is installed here, and mobile-lite is registered with it.
     claude_installed: bool,
     claude_registered: bool,
     phones: Vec<Phone>,
+}
+
+#[derive(Serialize, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct Cabled {
+    name: String,
+    /// "samsung", "xiaomi"... for the right steps to USB debugging.
+    maker: &'static str,
 }
 
 #[derive(Serialize, Clone, PartialEq)]
@@ -130,6 +163,13 @@ struct Shared {
     uia2: HashMap<String, (bool, Instant)>,
     access: HashMap<String, (HashMap<&'static str, bool>, Instant)>,
     claude: Option<(bool, bool, Instant)>,
+    /// (USB serial, name, maker) of the phones last seen on the cable, and when.
+    cable: Option<(Vec<(String, String, &'static str)>, Instant)>,
+    /// Phones the app was installed on by itself (once each, so a failure
+    /// waits for the button instead of looping).
+    auto_installed: std::collections::HashSet<String>,
+    /// Fetching adb by itself happened (once per run).
+    auto_adb: bool,
     auto_opened: HashMap<String, Instant>,
     last: Option<View>,
 }
@@ -185,13 +225,29 @@ fn gather() -> View {
         adb_error,
         can_download_adb: !PLATFORM_TOOLS.0.is_empty(),
         has_apk: apk_path().is_some(),
+        cabled: Vec::new(),
         usb_connected: usb_connected(),
         claude_installed: false,
         claude_registered: false,
         phones: Vec::new(),
     };
     (view.claude_installed, view.claude_registered) = claude_status();
+    let on_cable = cable_phones();
     if !adb {
+        // A phone on the cable and no adb anywhere: fetch it without asking (once).
+        let fetch = {
+            let mut s = shared();
+            let due = !on_cable.is_empty() && !s.downloading && !s.auto_adb && view.can_download_adb;
+            if due {
+                s.auto_adb = true;
+            }
+            due
+        };
+        if fetch {
+            act(String::new(), "download-adb".to_owned());
+            view.adb = "downloading";
+        }
+        view.cabled = on_cable.into_iter().map(|(_, name, maker)| Cabled { name, maker }).collect();
         return view;
     }
     let devices = runtime()
@@ -200,6 +256,12 @@ fn gather() -> View {
         .and_then(Result::ok)
         .unwrap_or_default();
     let plugged: Vec<String> = devices.iter().map(|d| d.serial.clone()).collect();
+    // On the cable but not in adb at all: USB debugging is still off.
+    view.cabled = on_cable
+        .into_iter()
+        .filter(|(serial, ..)| !plugged.iter().any(|p| p.eq_ignore_ascii_case(serial)))
+        .map(|(_, name, maker)| Cabled { name, maker })
+        .collect();
     {
         let mut s = shared();
         s.waiting_since.retain(|serial, _| plugged.contains(serial));
@@ -211,6 +273,11 @@ fn gather() -> View {
             auto_open(&device.serial);
         } else {
             shared().waiting_since.remove(&device.serial);
+        }
+        // Allowed and without NectarLink: install it without asking (once).
+        if app == "missing" && view.has_apk && shared().auto_installed.insert(device.serial.clone()) {
+            tracing::info!(serial = %device.serial, "installing NectarLink on the plugged-in phone");
+            act(device.serial.clone(), "install".to_owned());
         }
         let claude_ready = device.is_online() && uia2_installed(&device.serial);
         let access = if app == "installed" { access_of(&device.serial) } else { HashMap::new() };
@@ -254,6 +321,80 @@ fn auto_open(serial: &str) {
 
 fn app_running(serial: &str) -> bool {
     shell(serial, &format!("pidof {PACKAGE}")).is_ok_and(|out| !out.trim().is_empty())
+}
+
+/// Android phones on the cable as the OS sees them (whatever USB debugging
+/// says): (USB serial, name, maker). Looked at every few seconds.
+fn cable_phones() -> Vec<(String, String, &'static str)> {
+    if let Some((phones, at)) = shared().cable.clone()
+        && at.elapsed() < CABLE_POLL
+    {
+        return phones;
+    }
+    let phones = list_cable_phones();
+    shared().cable = Some((phones.clone(), Instant::now()));
+    phones
+}
+
+fn maker_of(vendor: u16) -> Option<&'static str> {
+    ANDROID_VENDORS.iter().find(|(v, _)| *v == vendor).map(|(_, m)| *m)
+}
+
+/// Windows: media (MTP) devices `pnputil` lists as connected, by vendor ID.
+#[cfg(windows)]
+fn list_cable_phones() -> Vec<(String, String, &'static str)> {
+    let Ok(out) = hidden(Command::new("pnputil").args(["/enum-devices", "/connected", "/class", "WPD"])).output() else {
+        return Vec::new();
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut phones = Vec::new();
+    let mut instance: Option<String> = None;
+    for line in text.lines() {
+        let Some((key, value)) = line.split_once(':') else { continue };
+        let value = value.trim();
+        if key.trim().eq_ignore_ascii_case("Instance ID") {
+            instance = Some(value.to_owned());
+        } else if key.trim().eq_ignore_ascii_case("Device Description")
+            && let Some(id) = instance.take()
+        {
+            // USB\VID_19D2&PID_0307\<serial>
+            let upper = id.to_ascii_uppercase();
+            let vendor = upper.split("VID_").nth(1).and_then(|v| u16::from_str_radix(v.get(..4)?, 16).ok());
+            if let Some(maker) = vendor.and_then(maker_of) {
+                let serial = id.rsplit('\\').next().unwrap_or_default().to_owned();
+                phones.push((serial, value.to_owned(), maker));
+            }
+        }
+    }
+    phones
+}
+
+/// macOS: USB devices in the IORegistry, by vendor ID.
+#[cfg(target_os = "macos")]
+fn list_cable_phones() -> Vec<(String, String, &'static str)> {
+    let Ok(out) = Command::new("/usr/sbin/ioreg").args(["-p", "IOUSB", "-l", "-w0"]).output() else {
+        return Vec::new();
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut phones = Vec::new();
+    for block in text.split("+-o ") {
+        let field = |name: &str| {
+            block.lines().find_map(|l| {
+                let (_, rest) = l.split_once(&format!("\"{name}\" = "))?;
+                Some(rest.trim().trim_matches('"').to_owned())
+            })
+        };
+        let Some(maker) = field("idVendor").and_then(|v| v.parse::<u16>().ok()).and_then(maker_of) else { continue };
+        let name = field("USB Product Name").unwrap_or_else(|| "Android phone".to_owned());
+        let serial = field("USB Serial Number").unwrap_or_default();
+        phones.push((serial, name, maker));
+    }
+    phones
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn list_cable_phones() -> Vec<(String, String, &'static str)> {
+    Vec::new()
 }
 
 /// Phones on a cable; adb also lists wireless-debugging and emulator serials.
@@ -329,6 +470,12 @@ pub fn act(serial: String, action: String) {
             "open" => open_app(&serial),
             "reconnect" => reconnect(),
             "claude" => set_up_claude(&serial),
+            "recheck" => {
+                let mut s = shared();
+                s.cable = None;
+                s.apps.clear();
+                Ok(())
+            }
             a if a.starts_with("allow:") => set_access(&serial, &a[6..], true),
             a if a.starts_with("deny:") => set_access(&serial, &a[5..], false),
             _ => Ok(()),
