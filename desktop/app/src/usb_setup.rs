@@ -33,6 +33,10 @@ const MAIN_ACTIVITY: &str = "app.nectarlink/app.nectarlink.android.ui.MainActivi
 const POLL: Duration = Duration::from_secs(2);
 /// How long a phone's "is NectarLink installed" answer is trusted.
 const APP_CHECK_TTL: Duration = Duration::from_secs(10);
+/// How long a phone may be on the cable without adb seeing it before adb
+/// starts again (it misses phones after the PC sleeps), and how often at most.
+const ADB_STUCK_AFTER: Duration = Duration::from_secs(30);
+const ADB_RESTART_EVERY: Duration = Duration::from_secs(180);
 /// How long a phone with NectarLink installed may stay unconnected over USB
 /// before the app is opened on it from here, and how often that's retried.
 const AUTO_OPEN_AFTER: Duration = Duration::from_secs(6);
@@ -173,6 +177,10 @@ struct Shared {
     /// Fetching adb by itself happened (once per run).
     auto_adb: bool,
     auto_opened: HashMap<String, Instant>,
+    /// Since when a phone has been on the cable without adb seeing it.
+    unseen_since: Option<Instant>,
+    /// When adb was last started again for that.
+    adb_restarted: Option<Instant>,
 }
 
 fn shared() -> std::sync::MutexGuard<'static, Shared> {
@@ -276,6 +284,7 @@ fn gather() -> View {
         .filter(|(serial, ..)| !plugged.iter().any(|p| p.eq_ignore_ascii_case(serial)))
         .map(|(_, name, maker)| Cabled { name, maker })
         .collect();
+    restart_adb_if_stuck(!view.cabled.is_empty());
     {
         let mut s = shared();
         s.waiting_since.retain(|serial, _| plugged.contains(serial));
@@ -312,6 +321,30 @@ fn gather() -> View {
         });
     }
     view
+}
+
+/// A phone on the cable that adb doesn't see is usually USB debugging being
+/// off, but an adb server that was running while the PC slept misses phones
+/// until it starts again: start it again now and then, as Check again does.
+fn restart_adb_if_stuck(unseen: bool) {
+    let due = {
+        let mut s = shared();
+        if !unseen {
+            s.unseen_since = None;
+            return;
+        }
+        let since = *s.unseen_since.get_or_insert_with(Instant::now);
+        let due = since.elapsed() >= ADB_STUCK_AFTER
+            && s.adb_restarted.is_none_or(|at| at.elapsed() >= ADB_RESTART_EVERY);
+        if due {
+            s.adb_restarted = Some(Instant::now());
+        }
+        due
+    };
+    if due {
+        tracing::info!("a phone on the cable isn't in adb: starting adb again");
+        let _ = ask_again();
+    }
 }
 
 /// Opens NectarLink on a phone that has it but hasn't connected over USB for a
