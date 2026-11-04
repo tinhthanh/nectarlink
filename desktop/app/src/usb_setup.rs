@@ -353,37 +353,65 @@ fn maker_of(vendor: u16) -> Option<&'static str> {
 /// Windows: media (MTP) devices `pnputil` lists as connected, by vendor ID.
 #[cfg(windows)]
 fn list_cable_phones() -> Vec<(String, String, &'static str)> {
-    let out = match hidden(Command::new("pnputil").args(["/enum-devices", "/connected", "/class", "WPD"])).output() {
-        Ok(out) if out.status.success() => out,
-        Ok(out) => {
-            tracing::warn!(status = %out.status, stderr = %String::from_utf8_lossy(&out.stderr), "pnputil failed");
-            return Vec::new();
+    // `/relations` (Windows 10 21H2+) adds each device's parent.
+    let run = |relations: bool| {
+        let mut command = Command::new("pnputil");
+        command.args(["/enum-devices", "/connected", "/class", "WPD"]);
+        if relations {
+            command.arg("/relations");
         }
-        Err(e) => {
-            tracing::warn!(error = %e, "can't run pnputil");
-            return Vec::new();
-        }
+        hidden(&mut command).output()
     };
-    let text = String::from_utf8_lossy(&out.stdout);
+    let out = match run(true) {
+        Ok(out) if out.status.success() => out,
+        _ => match run(false) {
+            Ok(out) if out.status.success() => out,
+            Ok(out) => {
+                tracing::warn!(status = %out.status, stderr = %String::from_utf8_lossy(&out.stderr), "pnputil failed");
+                return Vec::new();
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, "can't run pnputil");
+                return Vec::new();
+            }
+        },
+    };
+    parse_pnputil(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// `pnputil /enum-devices` output: (USB serial, name, maker) of the phones in it.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn parse_pnputil(text: &str) -> Vec<(String, String, &'static str)> {
     let mut phones = Vec::new();
-    let mut instance: Option<String> = None;
+    // Instance ID, description, parent of the device being read.
+    let mut device: Option<(String, String, Option<String>)> = None;
+    let mut finish = |device: Option<(String, String, Option<String>)>| {
+        let Some((id, name, parent)) = device else { return };
+        let upper = id.to_ascii_uppercase();
+        let vendor = upper.split("VID_").nth(1).and_then(|v| u16::from_str_radix(v.get(..4)?, 16).ok());
+        let Some(maker) = vendor.and_then(maker_of) else { return };
+        // USB\VID_19D2&PID_0307\<serial>, or with USB debugging on, one
+        // interface of USB\VID_19D2&PID_0306\<serial>:
+        // USB\VID_19D2&PID_0306&MI_00\6&3b700315&0&0000.
+        let usb_id = if upper.contains("&MI_") { parent.unwrap_or_default() } else { id };
+        let serial = usb_id.rsplit('\\').next().unwrap_or_default().to_owned();
+        phones.push((serial, name, maker));
+    };
     for line in text.lines() {
         let Some((key, value)) = line.split_once(':') else { continue };
-        let value = value.trim();
-        if key.trim().eq_ignore_ascii_case("Instance ID") {
-            instance = Some(value.to_owned());
-        } else if key.trim().eq_ignore_ascii_case("Device Description")
-            && let Some(id) = instance.take()
-        {
-            // USB\VID_19D2&PID_0307\<serial>
-            let upper = id.to_ascii_uppercase();
-            let vendor = upper.split("VID_").nth(1).and_then(|v| u16::from_str_radix(v.get(..4)?, 16).ok());
-            if let Some(maker) = vendor.and_then(maker_of) {
-                let serial = id.rsplit('\\').next().unwrap_or_default().to_owned();
-                phones.push((serial, value.to_owned(), maker));
+        let (key, value) = (key.trim(), value.trim());
+        if key.eq_ignore_ascii_case("Instance ID") {
+            finish(device.take());
+            device = Some((value.to_owned(), String::new(), None));
+        } else if let Some((_, name, parent)) = device.as_mut() {
+            if key.eq_ignore_ascii_case("Device Description") {
+                *name = value.to_owned();
+            } else if key.eq_ignore_ascii_case("Parent") {
+                *parent = Some(value.to_owned());
             }
         }
     }
+    finish(device);
     phones
 }
 
@@ -866,4 +894,27 @@ fn hidden(command: &mut Command) -> &mut Command {
         command.creation_flags(0x0800_0000);
     }
     command
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pnputil_gives_the_serial_with_and_without_usb_debugging() {
+        let text = "Microsoft PnP Utility\r\n\r\n\
+            Instance ID:                USB\\VID_19D2&PID_0307\\NBA54VNAC3000822\r\n\
+            Device Description:         ZTE Blade A54\r\n\
+            Class Name:                 WPD\r\n\
+            Parent:                     USB\\ROOT_HUB30\\5&1a2b3c&0&0\r\n\r\n\
+            Instance ID:                USB\\VID_19D2&PID_0306&MI_00\\6&3b700315&0&0000\r\n\
+            Device Description:         ZTE Blade A54\r\n\
+            Class Name:                 WPD\r\n\
+            Parent:                     USB\\VID_19D2&PID_0306\\NBA54VNAC3000822\r\n\r\n\
+            Instance ID:                SWD\\WPDBUSENUM\\_??_USBSTOR#Disk\r\n\
+            Device Description:         USB stick\r\n";
+        let phones = parse_pnputil(text);
+        assert_eq!(phones.len(), 2);
+        assert!(phones.iter().all(|(serial, name, maker)| serial == "NBA54VNAC3000822" && name == "ZTE Blade A54" && *maker == "zte"));
+    }
 }
