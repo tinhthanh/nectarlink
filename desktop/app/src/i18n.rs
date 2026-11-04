@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// Languages the app speaks, as Settings offers them: a locale name ("" for
 /// the system's) and how the language calls itself.
 pub const LANGUAGES: &[(&str, &str)] =
-    &[("", ""), ("en", "English"), ("de", "Deutsch"), ("zh_CN", "简体中文"), ("tr", "Türkçe")];
+    &[("", ""), ("en", "English"), ("de", "Deutsch"), ("zh_CN", "简体中文"), ("tr", "Türkçe"), ("vi", "Tiếng Việt")];
 
 /// [`LANGUAGES`] without the system's, as JSON for Settings: `[{ code, name }]`.
 pub fn languages_json() -> String {
