@@ -515,6 +515,7 @@ pub fn act(serial: String, action: String) {
                 .and_then(|()| open_app(&serial)),
             "open" => open_app(&serial),
             "reconnect" => reconnect(),
+            "ask-again" => ask_again(),
             "claude" => set_up_claude(&serial),
             "recheck" => {
                 let mut s = shared();
@@ -522,6 +523,7 @@ pub fn act(serial: String, action: String) {
                 s.apps.clear();
                 Ok(())
             }
+            "allow:all" => ACCESS.iter().try_for_each(|(id, ..)| set_access(&serial, id, true)),
             a if a.starts_with("allow:") => set_access(&serial, &a[6..], true),
             a if a.starts_with("deny:") => set_access(&serial, &a[5..], false),
             _ => Ok(()),
@@ -602,6 +604,17 @@ fn reconnect() -> Result<(), String> {
     runtime().block_on(async {
         let mut stream = tokio::net::TcpStream::connect(DEFAULT_ADB_ADDR).await.map_err(|e| e.to_string())?;
         nectarlink_adb::send_command(&mut stream, "host:reconnect-offline").await.map_err(|e| e.to_string())
+    })
+}
+
+/// Stops the adb server; the next look starts a new one, which connects to the
+/// phone afresh, so a phone still waiting for "Allow USB debugging" asks again.
+fn ask_again() -> Result<(), String> {
+    runtime().block_on(async {
+        let mut stream = tokio::net::TcpStream::connect(DEFAULT_ADB_ADDR).await.map_err(|e| e.to_string())?;
+        // The server goes away without always answering.
+        let _ = nectarlink_adb::send_command(&mut stream, "host:kill").await;
+        Ok(())
     })
 }
 

@@ -43,12 +43,30 @@ Card {
                     wrapMode: Text.WordWrap
                     text: qsTr("What NectarLink can use on %1").arg(phone.model.length > 0 ? phone.model : qsTr("your phone"))
                 }
-                Txt {
+                Item {
                     width: parent.width
-                    role: "bodySmall"
-                    muted: true
-                    wrapMode: Text.WordWrap
-                    text: qsTr("Turn on what you want. This PC sets it on the phone over the cable, so the phone doesn't ask.")
+                    height: Math.max(accessHint.implicitHeight, allButton.visible ? allButton.implicitHeight : 0)
+                    Txt {
+                        id: accessHint
+                        anchors.left: parent.left
+                        anchors.right: allButton.visible ? allButton.left : parent.right
+                        anchors.rightMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        role: "bodySmall"
+                        muted: true
+                        wrapMode: Text.WordWrap
+                        text: qsTr("Turn on what you want. This PC sets it on the phone over the cable, so the phone doesn't ask.")
+                    }
+                    Button {
+                        id: allButton
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: Object.keys(phone.access).some(k => !phone.access[k])
+                        enabled: !phone.busy
+                        size: "sm"
+                        text: qsTr("Turn all on")
+                        onClicked: AppController.usbSetupAction(phone.serial, "allow:all")
+                    }
                 }
                 Repeater {
                     model: accessCard.groups

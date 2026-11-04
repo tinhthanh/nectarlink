@@ -144,6 +144,7 @@ Card {
                 readonly property var phone: modelData
                 // Installing and opening happen by themselves; the button is for a retry.
                 readonly property string action: phone.state === "offline" ? "reconnect"
+                    : phone.state === "unauthorized" && !phone.busy ? "ask-again"
                     : phone.state !== "device" || phone.busy ? ""
                     : phone.app === "missing" && phone.error.length > 0 && usbCard.usb.hasApk ? "install"
                     : phone.app === "installed" && phone.error.length > 0 ? "open" : ""
@@ -167,7 +168,7 @@ Card {
                         muted: true
                         wrapMode: Text.WordWrap
                         text: phone.state === "unauthorized"
-                              ? qsTr("On the phone, tick “Always allow from this computer” and tap Allow.")
+                              ? qsTr("On the phone, tick “Always allow from this computer” and tap Allow. No question on the phone? Unlock it and click Ask again.")
                             : phone.state === "offline"
                               ? qsTr("The phone isn't answering over USB. Reconnect, or plug the cable in again.")
                             : phone.state === "no permissions"
@@ -194,9 +195,11 @@ Card {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: action.length > 0
                     size: "sm"
-                    iconPath: action === "install" ? Icons.download : action === "reconnect" ? Icons.refresh : Icons.phone
+                    iconPath: action === "install" ? Icons.download
+                        : action === "reconnect" || action === "ask-again" ? Icons.refresh : Icons.phone
                     text: action === "install" ? qsTr("Try again")
                         : action === "reconnect" ? qsTr("Reconnect")
+                        : action === "ask-again" ? qsTr("Ask again")
                         : qsTr("Open on phone")
                     onClicked: AppController.usbSetupAction(phone.serial, action)
                 }
