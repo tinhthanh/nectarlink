@@ -158,6 +158,8 @@ struct Shared {
     busy: HashMap<String, bool>,
     errors: HashMap<String, String>,
     apps: HashMap<String, (bool, Instant)>,
+    /// The name each phone shows in its settings ("Galaxy A14 5G", not SM-A146P).
+    device_names: HashMap<String, String>,
     /// When each phone was first seen waiting for its app, and last opened.
     waiting_since: HashMap<String, Instant>,
     uia2: HashMap<String, (bool, Instant)>,
@@ -293,12 +295,11 @@ fn gather() -> View {
         }
         let claude_ready = device.is_online() && uia2_installed(&device.serial);
         let access = if app == "installed" { access_of(&device.serial) } else { HashMap::new() };
+        let shown = if device.is_online() { device_name(&device.serial) } else { None };
         let s = shared();
         view.phones.push(Phone {
-            model: device
-                .model
-                .clone()
-                .map(|m| m.replace('_', " "))
+            model: shown
+                .or_else(|| device.model.clone().map(|m| m.replace('_', " ")))
                 .or_else(|| names.get(&device.serial).cloned())
                 .unwrap_or_default(),
             state: device.state.clone(),
@@ -334,6 +335,19 @@ fn auto_open(serial: &str) {
         tracing::info!(serial, "opening NectarLink on the plugged-in phone");
         act(serial.to_owned(), "open".to_owned());
     }
+}
+
+/// The phone's name in its settings (About phone › Device name), looked up once.
+fn device_name(serial: &str) -> Option<String> {
+    if let Some(name) = shared().device_names.get(serial) {
+        return Some(name.clone());
+    }
+    let name = shell(serial, "settings get global device_name").ok()?.trim().to_owned();
+    if name.is_empty() || name == "null" {
+        return None;
+    }
+    shared().device_names.insert(serial.to_owned(), name.clone());
+    Some(name)
 }
 
 fn app_running(serial: &str) -> bool {
