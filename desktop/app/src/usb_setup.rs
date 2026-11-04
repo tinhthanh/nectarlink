@@ -497,7 +497,9 @@ fn shell(serial: &str, command: &str) -> Result<String, String> {
 
 /// A button on the USB card: "download-adb", "install", "open", "reconnect".
 pub fn act(serial: String, action: String) {
-    if action != "download-adb" && !nectarlink_adb::is_serial_allowed(&serial) {
+    // Fetching adb and looking again are for no phone in particular.
+    let any_phone = matches!(action.as_str(), "download-adb" | "recheck");
+    if !any_phone && !nectarlink_adb::is_serial_allowed(&serial) {
         return;
     }
     {
@@ -528,7 +530,9 @@ pub fn act(serial: String, action: String) {
             "reconnect" => reconnect(),
             "ask-again" => ask_again(),
             "claude" => set_up_claude(&serial),
+            // A fresh adb server too, in case this one doesn't see the phone.
             "recheck" => {
+                let _ = ask_again();
                 let mut s = shared();
                 s.cable = None;
                 s.apps.clear();
@@ -858,9 +862,16 @@ fn download_adb() -> Result<(), String> {
         let _ = std::fs::remove_file(&zip);
         return Err(format!("platform-tools didn't match the expected checksum ({got})"));
     }
-    let _ = std::fs::remove_dir_all(dir.join("platform-tools"));
-    unzip(&zip, &dir)?;
+    // Unpacked next to it and moved in whole: an adb.exe without its DLLs yet
+    // starts (the worker starts any adb it finds) and never sees a phone.
+    let staging = dir.join("platform-tools.new");
+    let _ = std::fs::remove_dir_all(&staging);
+    std::fs::create_dir_all(&staging).map_err(|e| e.to_string())?;
+    unzip(&zip, &staging)?;
     let _ = std::fs::remove_file(&zip);
+    let _ = std::fs::remove_dir_all(dir.join("platform-tools"));
+    std::fs::rename(staging.join("platform-tools"), dir.join("platform-tools")).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_dir_all(&staging);
     if ensure_adb_server() { Ok(()) } else { Err("adb didn't start".into()) }
 }
 
