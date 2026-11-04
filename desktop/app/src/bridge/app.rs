@@ -67,6 +67,8 @@ pub mod qobject {
         /// Whether Windows shows this app's notifications.
         #[qproperty(bool, toasts_enabled)]
         #[qproperty(QString, version)]
+        /// Which build this is (`custom.42.abc1234`), or empty: [`crate::BUILD`].
+        #[qproperty(QString, build)]
         /// The Connection Doctor's findings, as JSON: [{ id, outcome:
         /// "ok" | "warn" | "fail", title, detail, fix? }].
         #[qproperty(QString, doctor_checks)]
@@ -440,6 +442,7 @@ pub struct AppControllerRust {
     phone_colors: QString,
     toasts_enabled: bool,
     version: QString,
+    build: QString,
     doctor_checks: QString,
     doctor_busy: bool,
     usb_setup: QString,
@@ -752,6 +755,7 @@ fn spawn_data_retention_refresh(qt: CxxQtThread<qobject::AppController>) {
 impl cxx_qt::Initialize for qobject::AppController {
     fn initialize(mut self: Pin<&mut Self>) {
         self.as_mut().set_version(QString::from(env!("CARGO_PKG_VERSION")));
+        self.as_mut().set_build(QString::from(crate::BUILD));
         self.as_mut().set_current_page(QString::from("home"));
         self.as_mut().set_can_update(crate::updater::can_update());
         // Nothing downloading yet (0 would show an empty bar).

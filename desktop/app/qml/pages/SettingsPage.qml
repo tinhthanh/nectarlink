@@ -3270,6 +3270,7 @@ Item {
                             width: parent.width
                             iconPath: Icons.desktop
                             title: qsTr("NectarLink %1").arg(AppController.version)
+                                   + (AppController.build.length > 0 ? " (" + AppController.build + ")" : "")
                             description: AppController.updateStatus.length > 0
                                          ? AppController.updateStatus
                                          : qsTr("This PC: %1").arg(AppController.deviceName)

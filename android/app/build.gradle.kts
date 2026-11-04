@@ -10,6 +10,8 @@ plugins {
 val appVersion: String = rootProject.file("../Cargo.toml").readLines()
     .first { it.startsWith("version = ") }
     .substringAfter('"').substringBefore('"')
+/** Which build this is (`custom.42.abc1234`), from `-Pnectarlink.build`; shown after the version. */
+val appBuild: String? = providers.gradleProperty("nectarlink.build").orNull?.takeIf { it.isNotBlank() }
 /** 1.2.3 → 1002003: every release must have a larger code than the last. */
 val appVersionCode: Int = appVersion.substringBefore('-').split('.').map(String::toInt)
     .let { (major, minor, patch) -> major * 1_000_000 + minor * 1_000 + patch }
@@ -24,7 +26,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = appVersionCode
-        versionName = appVersion
+        versionName = appBuild?.let { "$appVersion+$it" } ?: appVersion
     }
 
     // Only the languages the app offers (res/xml/locales_config.xml) go into the APK: a

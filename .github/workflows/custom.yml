@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Shown next to the version (Settings, the log, the phone's app info): which build this is.
+      - name: Name this build
+        shell: bash
+        run: echo "NECTARLINK_BUILD=custom.${{ github.run_number }}.${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - name: Install the pinned Rust toolchain and the Android targets
         run: |
           rustup show active-toolchain || rustup toolchain install
@@ -52,7 +56,7 @@ jobs:
           fi
       - name: Build
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug -Pnectarlink.abis=arm64-v8a,armeabi-v7a
+        run: ./gradlew --no-daemon assembleDebug -Pnectarlink.abis=arm64-v8a,armeabi-v7a "-Pnectarlink.build=$NECTARLINK_BUILD"
       - name: Forget the key
         if: always()
         run: rm -f ~/.android/debug.keystore
@@ -67,6 +71,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+      # Shown next to the version (Settings, the log, the phone's app info): which build this is.
+      - name: Name this build
+        shell: bash
+        run: echo "NECTARLINK_BUILD=custom.${{ github.run_number }}.${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v8
         with:
           name: android

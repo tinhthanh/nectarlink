@@ -91,6 +91,12 @@ use crate::{
 };
 
 /// How many fonts `build.rs` compiles in.
+/// Which build this is, set by whoever builds it (`NECTARLINK_BUILD=custom.42.abc1234`); empty otherwise.
+pub const BUILD: &str = match option_env!("NECTARLINK_BUILD") {
+    Some(build) => build,
+    None => "",
+};
+
 const BUNDLED_FONTS: i32 = 4;
 
 /// Rings the PC when a phone asks ("find my PC").
@@ -530,7 +536,7 @@ fn main() -> ExitCode {
     if options.widget_provider {
         return win::widget::run_provider(&data_dir);
     }
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), minimized = options.minimized, "starting");
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), build = BUILD, minimized = options.minimized, "starting");
 
     if options.uninstall {
         uninstall();

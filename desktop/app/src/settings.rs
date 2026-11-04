@@ -775,7 +775,8 @@ mod tests {
     fn round_trips_and_defaults() {
         let dir = tempfile::tempdir().unwrap();
         let def = Settings::load(dir.path());
-        assert_eq!(def, Settings::default());
+        // A new install opens on Home, not the walkthrough.
+        assert_eq!(def, Settings { walkthrough_completed: true, ..Settings::default() });
         assert_eq!(def.command_palette_hotkey, "Ctrl+Alt+Space");
         assert_eq!(def.shelf_hotkey, "Ctrl+Alt+S");
         assert!(!def.local_api_enabled);
