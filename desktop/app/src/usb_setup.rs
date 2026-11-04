@@ -262,6 +262,12 @@ fn gather() -> View {
         .and_then(Result::ok)
         .unwrap_or_default();
     let plugged: Vec<String> = devices.iter().map(|d| d.serial.clone()).collect();
+    // adb has no model for a phone it can't use yet (unauthorized): the name on the cable.
+    let cable_name = |serial: &str| {
+        on_cable.iter().find(|(s, ..)| s.eq_ignore_ascii_case(serial)).map(|(_, name, _)| name.clone())
+    };
+    let names: HashMap<String, String> =
+        plugged.iter().filter_map(|serial| Some((serial.clone(), cable_name(serial)?))).collect();
     // On the cable but not in adb at all: USB debugging is still off.
     view.cabled = on_cable
         .into_iter()
@@ -289,7 +295,12 @@ fn gather() -> View {
         let access = if app == "installed" { access_of(&device.serial) } else { HashMap::new() };
         let s = shared();
         view.phones.push(Phone {
-            model: device.model.clone().unwrap_or_default().replace('_', " "),
+            model: device
+                .model
+                .clone()
+                .map(|m| m.replace('_', " "))
+                .or_else(|| names.get(&device.serial).cloned())
+                .unwrap_or_default(),
             state: device.state.clone(),
             app,
             claude_ready,

@@ -472,10 +472,11 @@ Item {
                 }
             }
 
-            // Card shown when no phone is paired yet (for example after skipping first-run setup).
+            // Card shown when no phone is paired yet (for example after skipping first-run setup),
+            // unless a phone on the cable is being set up.
             Card {
                 width: column.width
-                visible: DeviceList.count === 0
+                visible: DeviceList.count === 0 && !(usbCard.visible && !usbCard.showPlugIn)
                 padding: 20
                 Item {
                     width: parent.width
