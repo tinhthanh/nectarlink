@@ -26,6 +26,10 @@ jobs:
         run: |
           rustup show active-toolchain || rustup toolchain install
           rustup target add aarch64-linux-android armv7-linux-androideabi
+      # Compiled crates (and cargo-ndk) from the last build: Rust is most of the time.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: android
       - name: Install cargo-ndk
         run: cargo install --locked cargo-ndk
       - uses: actions/setup-java@v6
@@ -69,6 +73,9 @@ jobs:
           path: phone
       - name: Install the pinned Rust toolchain
         run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: windows
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
