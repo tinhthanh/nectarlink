@@ -125,6 +125,16 @@ else
     echo "==> No phone app built (android/): the USB card can't install it"
 fi
 
+# NectarLink's translations, beside the executable where the app looks for
+# them. Only the languages Settings offers (i18n::LANGUAGES) ship, as on Windows.
+LRELEASE="$(dirname "${QMAKE}")/lrelease"
+OFFERED="$(sed -n '/pub const LANGUAGES/,/;/p' "${DESKTOP_DIR}/src/i18n.rs" | grep -o '("[A-Za-z_]*"' | tr -d '("')"
+for lang in ${OFFERED}; do
+    ts="${DESKTOP_DIR}/i18n/nectarlink_${lang}.ts"
+    [[ -f "${ts}" ]] && "${LRELEASE}" -silent "${ts}" -qm "${APP}/Contents/MacOS/nectarlink_${lang}.qm"
+done
+echo "==> Translations: $(echo ${OFFERED})"
+
 echo "==> Bundling Qt (${MACDEPLOYQT})"
 # Homebrew splits Qt into one keg per module; QT_INSTALL_LIBS links them all.
 "${MACDEPLOYQT}" "${APP}" -qmldir="${DESKTOP_DIR}/qml" -libpath="$("${QMAKE}" -query QT_INSTALL_LIBS)" -verbose=1
