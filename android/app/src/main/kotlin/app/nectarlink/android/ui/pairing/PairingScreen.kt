@@ -35,6 +35,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -91,8 +92,12 @@ fun PairingScreen(
         onDispose { actions.visible(false) }
     }
 
+    // Once paired, this screen goes away showing that, not the scanner (which
+    // would ask for the camera while it fades out).
+    var paired by remember { mutableStateOf<PairingState.Paired?>(null) }
     LaunchedEffect(pairing) {
         if (pairing is PairingState.Paired) {
+            paired = pairing
             delay(1_400)
             actions.reset()
             onDone()
@@ -121,7 +126,7 @@ fun PairingScreen(
         Spacer(Modifier.height(20.dp))
 
         AnimatedContent(
-            targetState = Triple(pairing, nearby, showing),
+            targetState = Triple(paired ?: pairing, nearby, showing),
             transitionSpec = {
                 if (reducedMotion) {
                     EnterTransition.None togetherWith ExitTransition.None
@@ -156,7 +161,7 @@ fun PairingScreen(
             }
         }
 
-        if (pairing == PairingState.Idle) {
+        if (pairing == PairingState.Idle && paired == null) {
             if (!showing) {
                 FilledTonalButton(onClick = { nearby = !nearby }) {
                     Text(stringResource(if (nearby) R.string.action_scan_instead else R.string.action_pair_nearby))
