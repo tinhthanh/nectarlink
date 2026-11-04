@@ -126,6 +126,13 @@ class ConnectionService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        starting = false
+        // Stopped before it could enter the foreground (onCreate did that by now).
+        if (stopWhenStarted) {
+            stopWhenStarted = false
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP_SERVICE) {
             Preferences.setBackgroundServiceEnabled(this, false)
             stopSelf()
@@ -288,17 +295,29 @@ class ConnectionService : LifecycleService() {
         private const val ACTION_STOP_RINGING = "app.nectarlink.action.STOP_RINGING"
         internal const val ACTION_STOP_SERVICE = "app.nectarlink.action.STOP_SERVICE"
 
+        /** Asked to start and not yet in the foreground. */
+        @Volatile private var starting = false
+        @Volatile private var stopWhenStarted = false
+
         /** Starts the service when allowed by Android's foreground-service rules. */
         fun start(context: Context) {
             if (!Preferences.isBackgroundServiceEnabled(context)) return
             runCatching {
                 ContextCompat.startForegroundService(context, Intent(context, ConnectionService::class.java))
+                stopWhenStarted = false
+                starting = true
             }.onFailure {
                 android.util.Log.w("ConnectionService", "can't start in background", it)
             }
         }
 
         fun stop(context: Context) {
+            // Stopping it before it enters the foreground makes Android end the
+            // app (ForegroundServiceDidNotStartInTimeException): it stops itself then.
+            if (starting) {
+                stopWhenStarted = true
+                return
+            }
             runCatching {
                 context.stopService(Intent(context, ConnectionService::class.java))
             }
