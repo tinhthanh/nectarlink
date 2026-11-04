@@ -876,17 +876,25 @@ fn download_adb() -> Result<(), String> {
         let _ = std::fs::remove_file(&zip);
         return Err(format!("platform-tools didn't match the expected checksum ({got})"));
     }
-    // Unpacked next to it and moved in whole: an adb.exe without its DLLs yet
-    // starts (the worker starts any adb it finds) and never sees a phone.
+    let unpacked = unpack_platform_tools(&zip, &dir);
+    let _ = std::fs::remove_file(&zip);
+    unpacked?;
+    if ensure_adb_server() { Ok(()) } else { Err("adb didn't start".into()) }
+}
+
+/// Puts `zip`'s platform-tools folder at `dir`/platform-tools. Unpacked next to
+/// it and moved in whole: an adb.exe without its DLLs yet starts (the worker
+/// starts any adb it finds) and never sees a phone.
+fn unpack_platform_tools(zip: &Path, dir: &Path) -> Result<(), String> {
     let staging = dir.join("platform-tools.new");
     let _ = std::fs::remove_dir_all(&staging);
     std::fs::create_dir_all(&staging).map_err(|e| e.to_string())?;
-    unzip(&zip, &staging)?;
-    let _ = std::fs::remove_file(&zip);
-    let _ = std::fs::remove_dir_all(dir.join("platform-tools"));
-    std::fs::rename(staging.join("platform-tools"), dir.join("platform-tools")).map_err(|e| e.to_string())?;
+    let moved = unzip(zip, &staging).and_then(|()| {
+        let _ = std::fs::remove_dir_all(dir.join("platform-tools"));
+        std::fs::rename(staging.join("platform-tools"), dir.join("platform-tools")).map_err(|e| e.to_string())
+    });
     let _ = std::fs::remove_dir_all(&staging);
-    if ensure_adb_server() { Ok(()) } else { Err("adb didn't start".into()) }
+    moved
 }
 
 #[cfg(any(windows, target_os = "macos"))]
@@ -948,6 +956,33 @@ fn hidden(command: &mut Command) -> &mut Command {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn platform_tools_arrive_whole_and_replace_the_old_ones() {
+        let dir = std::env::temp_dir().join(format!("nl-unpack-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let src = dir.join("src/platform-tools");
+        std::fs::create_dir_all(&src).unwrap();
+        std::fs::write(src.join("adb"), "new adb").unwrap();
+        std::fs::write(src.join("AdbWinUsbApi.dll"), "dll").unwrap();
+        let zip = dir.join("platform-tools.zip");
+        let zipped = if cfg!(target_os = "macos") {
+            Command::new("/usr/bin/ditto").args(["-c", "-k", "--keepParent"]).arg(&src).arg(&zip).status()
+        } else {
+            Command::new("tar").arg("-a").arg("-cf").arg(&zip).arg("-C").arg(dir.join("src")).arg("platform-tools").status()
+        };
+        assert!(zipped.unwrap().success());
+        let tools = dir.join("tools");
+        std::fs::create_dir_all(tools.join("platform-tools")).unwrap();
+        std::fs::write(tools.join("platform-tools/adb"), "old adb").unwrap();
+
+        unpack_platform_tools(&zip, &tools).unwrap();
+
+        assert_eq!(std::fs::read_to_string(tools.join("platform-tools/adb")).unwrap(), "new adb");
+        assert!(tools.join("platform-tools/AdbWinUsbApi.dll").exists());
+        assert!(!tools.join("platform-tools.new").exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn pnputil_gives_the_serial_with_and_without_usb_debugging() {
