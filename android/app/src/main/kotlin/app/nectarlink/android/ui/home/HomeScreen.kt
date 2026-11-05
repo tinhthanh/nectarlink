@@ -232,11 +232,6 @@ fun HomeScreen(
     onStopWebcam: () -> Unit = {},
     onOpenRecorder: (pcId: String) -> Unit = {},
     onStopRecorder: () -> Unit = {},
-    showWhatsNewGuideBanner: Boolean = false,
-    onDismissWhatsNewGuide: () -> Unit = {},
-    showHiveInvite: Boolean = false,
-    onTryHive: () -> Unit = {},
-    onDismissHiveInvite: () -> Unit = {},
     backgroundServiceEnabled: Boolean = true,
     onTurnOnBackgroundService: () -> Unit = {},
     onOpenFeaturesGuide: () -> Unit = {},
@@ -337,23 +332,6 @@ fun HomeScreen(
                 FilledTonalIconButton(onClick = onPairNew) {
                     Icon(painterResource(R.drawable.ic_qr), contentDescription = stringResource(R.string.action_pair_new))
                 }
-            }
-        }
-        if (showWhatsNewGuideBanner) {
-            item(key = "whats_new_guide_banner", contentType = "banner") {
-                WhatsNewFeaturesGuideCard(
-                    onOpenGuide = {
-                        onDismissWhatsNewGuide()
-                        onOpenFeaturesGuide()
-                    },
-                    onDismiss = onDismissWhatsNewGuide,
-                )
-            }
-        }
-        // After the What's new card, one at a time.
-        if (showHiveInvite && !showWhatsNewGuideBanner) {
-            item(key = "hive_invite", contentType = "banner") {
-                HiveInviteCard(onTry = onTryHive, onDismiss = onDismissHiveInvite)
             }
         }
         state.ringingFrom?.let { from ->
@@ -797,107 +775,6 @@ private fun Modifier.guideHighlightRing(highlighted: Boolean): Modifier {
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerPx, cornerPx),
             style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokePx),
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun WhatsNewFeaturesGuideCard(
-    onOpenGuide: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val isGlass = LocalGlassTheme.current
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlassCard(
-                cornerRadius = 24.dp,
-                isGlass = isGlass,
-                baseColor = MaterialTheme.colorScheme.secondaryContainer,
-                tintColor = MaterialTheme.colorScheme.primary,
-                outlineColor = if (isGlass) MaterialTheme.colorScheme.outlineVariant else Color.Transparent,
-            )
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.home_whats_new_guide),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        Text(
-            text = stringResource(R.string.home_guide_card_body),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Button(onClick = onOpenGuide) {
-                Text(stringResource(R.string.walkthrough_action_open_guide))
-            }
-            OutlinedButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_dismiss))
-            }
-        }
-    }
-}
-
-/** "Try Hive, the new theme", with a small window onto the comb in Hive's own colors. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun HiveInviteCard(onTry: () -> Unit, onDismiss: () -> Unit) {
-    val isGlass = LocalGlassTheme.current
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val reduced = app.nectarlink.android.ui.theme.LocalReducedMotion.current
-    val saving = app.nectarlink.android.ui.theme.rememberPowerSaver()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .liquidGlassCard(
-                cornerRadius = 24.dp,
-                isGlass = isGlass,
-                baseColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tintColor = MaterialTheme.colorScheme.primary,
-                outlineColor = if (isGlass) MaterialTheme.colorScheme.outlineVariant else Color.Transparent,
-            )
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (dark) Color(0xFF121214) else Color(0xFFFFF8F3)),
-            contentAlignment = Alignment.Center,
-        ) {
-            app.nectarlink.android.ui.theme.HiveComb(
-                dark = dark,
-                animate = !reduced && !saving,
-                cellDp = 9f,
-                origin = { androidx.compose.ui.geometry.Offset(it.width / 2f, it.height / 2f) },
-            )
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = stringResource(R.string.hive_invite_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.hive_invite_text),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(onClick = onTry) { Text(stringResource(R.string.hive_invite_try)) }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.hive_invite_dismiss)) }
-            }
-        }
     }
 }
 

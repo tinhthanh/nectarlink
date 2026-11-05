@@ -141,6 +141,7 @@ fun SettingsScreen(
     var pickLanguage by remember { mutableStateOf(false) }
     var activeCategory by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
     var pulsingSectionKey by remember { mutableStateOf<String?>(null) }
+    var accessExpanded by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val isGlass = LocalGlassTheme.current
     val anyDialogOpen = confirmUnpair != null || confirmClearEverything
 
@@ -169,11 +170,12 @@ fun SettingsScreen(
         val target = highlightTarget ?: return@LaunchedEffect
         val mapping = when (target) {
             GuideHighlightTarget.SETTINGS_DEVICES -> Triple("devices", "devices", 1)
-            GuideHighlightTarget.SETTINGS_NOTIFICATIONS -> Triple("permissions", "notifications", 1)
+            GuideHighlightTarget.SETTINGS_NOTIFICATIONS,
+            GuideHighlightTarget.SETTINGS_CALLS_CONTACTS,
+            -> Triple("permissions", "phone_access", 1)
             GuideHighlightTarget.SETTINGS_CONTROL -> Triple("permissions", "control", 2)
             GuideHighlightTarget.SETTINGS_BACKGROUND -> Triple("permissions", "background", 3)
-            GuideHighlightTarget.SETTINGS_CALLS_CONTACTS -> Triple("permissions", "calls_contacts", 4)
-            GuideHighlightTarget.SETTINGS_PHOTOS_STORAGE -> Triple("permissions", "photos", 5)
+            GuideHighlightTarget.SETTINGS_PHOTOS_STORAGE -> Triple("permissions", "photos", 4)
             GuideHighlightTarget.SETTINGS_CLIPBOARD -> Triple("features", "clipboard", 1)
             GuideHighlightTarget.SETTINGS_LOCALSEND -> Triple("features", "localsend", 3)
             GuideHighlightTarget.SETTINGS_DATA_STORAGE -> Triple("features", "data_storage", 4)
@@ -183,6 +185,7 @@ fun SettingsScreen(
             val (category, sectionKey, indexInCat) = mapping
             activeCategory = category
             pulsingSectionKey = sectionKey
+            if (sectionKey == "phone_access") accessExpanded = true
             onHighlightConsumed()
             delay(60)
             runCatching { listState.animateScrollToItem(indexInCat) }
@@ -203,19 +206,11 @@ fun SettingsScreen(
     ) {
         item(key = "header", contentType = "header") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    FilledTonalButton(onClick = onOpenFeaturesGuide) {
-                        Text(stringResource(R.string.guide_title))
-                    }
-                }
+                Text(
+                    stringResource(R.string.settings_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -611,12 +606,17 @@ fun SettingsScreen(
         }
 
         if (showPermissions) {
-            item(key = "notifications", contentType = "section") {
+            item(key = "phone_access", contentType = "section") {
                 Section(
-                    title = stringResource(R.string.settings_notifications),
-                    highlighted = pulsingSectionKey == "notifications",
+                    title = stringResource(R.string.settings_phone_access),
+                    highlighted = pulsingSectionKey == "phone_access",
                 ) {
-                    NotificationAccess(state.notificationAccess)
+                    PhoneAccess(
+                        state = state,
+                        expanded = accessExpanded,
+                        onExpandedChange = { accessExpanded = it },
+                        onAccessChanged = onAccessChanged,
+                    )
                 }
             }
 
@@ -670,51 +670,11 @@ fun SettingsScreen(
                 }
             }
 
-            item(key = "calls_contacts", contentType = "section") {
-                Section(
-                    title = stringResource(R.string.settings_calls_and_contacts),
-                    highlighted = pulsingSectionKey == "calls_contacts",
-                ) {
-                    RuntimePermissionAccess(
-                        title = stringResource(R.string.calls_title),
-                        textOn = stringResource(R.string.calls_on),
-                        textOff = stringResource(R.string.calls_off),
-                        granted = state.callAccess,
-                        permissions = PhoneCalls.permissions,
-                        onAccessChanged = onAccessChanged,
-                    )
-                    SettingRowDivider()
-                    RuntimePermissionAccess(
-                        title = stringResource(R.string.contacts_title),
-                        textOn = stringResource(R.string.contacts_on),
-                        textOff = stringResource(R.string.contacts_off),
-                        granted = state.contactsAccess,
-                        permissions = PhoneContacts.permissions,
-                        onAccessChanged = onAccessChanged,
-                    )
-                    SettingRowDivider()
-                    RuntimePermissionAccess(
-                        title = stringResource(R.string.sms_title),
-                        textOn = stringResource(R.string.sms_on),
-                        textOff = stringResource(R.string.sms_off),
-                        granted = state.smsAccess,
-                        permissions = PhoneSms.permissions,
-                        onAccessChanged = onAccessChanged,
-                    )
-                }
-            }
-
             item(key = "photos", contentType = "section") {
                 Section(
                     title = stringResource(R.string.settings_photos),
                     highlighted = pulsingSectionKey == "photos",
                 ) {
-                    PhotosAccess(
-                        granted = state.photoAccess,
-                        partial = state.photoPartialAccess,
-                        onAccessChanged = onAccessChanged,
-                    )
-                    SettingRowDivider()
                     StorageAccess(
                         allFiles = state.storageAllFilesAccess,
                         safFolders = state.storageSafFolders,
@@ -731,34 +691,6 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_clipboard_title),
                     highlighted = pulsingSectionKey == "clipboard",
                 ) {
-                    val context = LocalContext.current
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text(stringResource(R.string.settings_background_clipboard_title), style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                if (state.elevated) {
-                                    stringResource(R.string.settings_wireless_debugging_active)
-                                } else {
-                                    stringResource(R.string.settings_wireless_debugging_hint)
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        if (state.elevated) {
-                            OutlinedButton(onClick = { openDeveloperOptionsSettings(context) }) {
-                                Text(stringResource(R.string.action_manage))
-                            }
-                        } else {
-                            Button(onClick = {
-                                PairingNotification.show(context)
-                                openDeveloperOptionsSettings(context)
-                            }) {
-                                Text(stringResource(R.string.action_allow))
-                            }
-                        }
-                    }
-                    SettingRowDivider()
                     val suggestionsTitle = stringResource(R.string.settings_clipboard_suggestions)
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f).padding(end = 12.dp)) {
@@ -1132,6 +1064,126 @@ private fun openDeveloperOptionsSettings(context: Context) {
     }
 }
 
+/** One permission row in [PhoneAccess]. */
+private class AccessRow(val granted: Boolean, val content: @Composable () -> Unit)
+
+/**
+ * What the phone shares with the PC. Rows still to allow are shown; allowed
+ * ones fold into one summary row that opens to show them.
+ */
+@Composable
+private fun PhoneAccess(
+    state: CoreState,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onAccessChanged: () -> Unit,
+) {
+    val rows = listOf(
+        AccessRow(state.notificationAccess) { NotificationAccess(state.notificationAccess) },
+        AccessRow(state.callAccess) {
+            RuntimePermissionAccess(
+                title = stringResource(R.string.calls_title),
+                textOn = stringResource(R.string.calls_on),
+                textOff = stringResource(R.string.calls_off),
+                granted = state.callAccess,
+                permissions = PhoneCalls.permissions,
+                onAccessChanged = onAccessChanged,
+            )
+        },
+        AccessRow(state.contactsAccess) {
+            RuntimePermissionAccess(
+                title = stringResource(R.string.contacts_title),
+                textOn = stringResource(R.string.contacts_on),
+                textOff = stringResource(R.string.contacts_off),
+                granted = state.contactsAccess,
+                permissions = PhoneContacts.permissions,
+                onAccessChanged = onAccessChanged,
+            )
+        },
+        AccessRow(state.smsAccess) {
+            RuntimePermissionAccess(
+                title = stringResource(R.string.sms_title),
+                textOn = stringResource(R.string.sms_on),
+                textOff = stringResource(R.string.sms_off),
+                granted = state.smsAccess,
+                permissions = PhoneSms.permissions,
+                onAccessChanged = onAccessChanged,
+            )
+        },
+        // Only some photos picked still asks for something, so it stays out.
+        AccessRow(state.photoAccess && !state.photoPartialAccess) {
+            PhotosAccess(
+                granted = state.photoAccess,
+                partial = state.photoPartialAccess,
+                onAccessChanged = onAccessChanged,
+            )
+        },
+        AccessRow(state.elevated) { BackgroundClipboardAccess(state.elevated) },
+    )
+    val (granted, pending) = rows.partition { it.granted }
+    pending.forEachIndexed { index, row ->
+        if (index > 0) SettingRowDivider()
+        row.content()
+    }
+    if (granted.isEmpty()) return
+    if (pending.isNotEmpty()) SettingRowDivider()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().clickable { onExpandedChange(!expanded) },
+    ) {
+        Text(
+            if (pending.isEmpty()) {
+                stringResource(R.string.settings_access_all_allowed)
+            } else {
+                stringResource(R.string.settings_access_some_allowed, granted.size, rows.size)
+            },
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f).padding(end = 12.dp),
+        )
+        TextButton(onClick = { onExpandedChange(!expanded) }) {
+            Text(stringResource(if (expanded) R.string.settings_access_hide else R.string.settings_access_show))
+        }
+    }
+    if (expanded) {
+        granted.forEach { row ->
+            SettingRowDivider()
+            row.content()
+        }
+    }
+}
+
+/** Clipboard sync in the background, which needs Wireless debugging. */
+@Composable
+private fun BackgroundClipboardAccess(elevated: Boolean) {
+    val context = LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(stringResource(R.string.settings_background_clipboard_title), style = MaterialTheme.typography.titleSmall)
+            Text(
+                if (elevated) {
+                    stringResource(R.string.settings_wireless_debugging_active)
+                } else {
+                    stringResource(R.string.settings_wireless_debugging_hint)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (elevated) {
+            OutlinedButton(onClick = { openDeveloperOptionsSettings(context) }) {
+                Text(stringResource(R.string.action_manage))
+            }
+        } else {
+            Button(onClick = {
+                PairingNotification.show(context)
+                openDeveloperOptionsSettings(context)
+            }) {
+                Text(stringResource(R.string.action_allow))
+            }
+        }
+    }
+}
+
 /**
  * Notification access, which mirroring needs. Android shows the switch in
  * its own settings; sideloaded apps on Android 13+ must first be allowed
@@ -1198,7 +1250,7 @@ private fun BackgroundBatteryAccess(unrestricted: Boolean) {
                 }
             }
         }
-        if (oemGuide != null) {
+        if (oemGuide != null && !unrestricted) {
             Text(
                 oemGuide,
                 style = MaterialTheme.typography.bodySmall,

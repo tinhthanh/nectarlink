@@ -786,7 +786,6 @@ private fun App(
                     val volumeKeysControlPc by preferences.volumeKeysControlPc.collectAsStateWithLifecycle()
                     val backgroundServiceEnabled by preferences.backgroundServiceEnabled.collectAsStateWithLifecycle()
                     val startWithoutAsking by app.nectarlink.android.service.PcAutoStart.pcs(context).collectAsStateWithLifecycle()
-                    val hiveInviteShown by preferences.hiveInviteShown.collectAsStateWithLifecycle()
                     val saveableStateHolder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
 
                     // Only apply top scaffold padding here so LazyColumns in HomeScreen/SettingsScreen
@@ -905,24 +904,13 @@ private fun App(
                                     onStopWebcam = { WebcamService.stop(context) },
                                     onOpenRecorder = { pcId -> recordPcId = pcId },
                                     onStopRecorder = { RecorderService.stop(context) },
-                                    showWhatsNewGuideBanner = startupWalkthrough.showWhatsNewGuideBanner,
-                                    showHiveInvite = hiveInviteShown && appearance.theme != "hive",
-                                    onTryHive = {
-                                        preferences.answerHiveInvite()
-                                        preferences.update { it.copy(theme = "hive") }
-                                    },
-                                    onDismissHiveInvite = preferences::answerHiveInvite,
                                     backgroundServiceEnabled = backgroundServiceEnabled,
                                     onTurnOnBackgroundService = {
                                         preferences.updateBackgroundServiceEnabled(true)
                                         core.start()
                                         ConnectionService.start(context)
                                     },
-                                    onDismissWhatsNewGuide = {
-                                        preferences.updateWalkthrough { it.dismissWhatsNewGuide() }
-                                    },
                                     onOpenFeaturesGuide = {
-                                        preferences.updateWalkthrough { it.dismissWhatsNewGuide() }
                                         featuresGuideOpen = true
                                     },
                                     onOpenWalkthrough = {

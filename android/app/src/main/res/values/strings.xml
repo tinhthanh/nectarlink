@@ -59,7 +59,6 @@
     <string name="settings_dynamic_color_hint">Use your wallpaper\'s colors.</string>
     <string name="settings_devices">PCs</string>
     <string name="settings_about">About</string>
-    <string name="settings_notifications">Notifications</string>
     <string name="notifications_title">Show notifications on your PC</string>
     <string name="notifications_on">On. Notifications appear on your paired PCs, where you can reply to and dismiss them.</string>
     <string name="notifications_off">NectarLink needs notification access to show this phone’s notifications on your PC.</string>
@@ -138,7 +137,6 @@
     </plurals>
     <string name="app_windows_text">Shown on %1$s. They run here, beside what\'s on your screen.</string>
     <string name="action_close_all">Close all</string>
-    <string name="settings_calls_and_contacts">Calls, contacts and messages</string>
     <string name="sms_title">Text from your PC</string>
     <string name="sms_on">On. Conversations appear on your PC, where you can read and send texts.</string>
     <string name="sms_off">Read and send texts from your PC. Needs access to messages and contacts.</string>
@@ -149,6 +147,11 @@
     <string name="contacts_on">On. Your contacts are available in Calls and Messages on your PC.</string>
     <string name="contacts_off">Search contacts and call or text from your PC. Needs access to contacts.</string>
     <string name="settings_photos">Photos and videos</string>
+    <string name="settings_phone_access">Shared with your PC</string>
+    <string name="settings_access_all_allowed">All allowed</string>
+    <string name="settings_access_some_allowed">%1$d of %2$d allowed</string>
+    <string name="settings_access_show">Show</string>
+    <string name="settings_access_hide">Hide</string>
     <string name="photos_title">Photos and videos on your PC</string>
     <string name="photos_on">On. Your photos, screenshots and videos are available on your PC.</string>
     <string name="photos_partial">Only some photos are shared. Allow all to browse your whole gallery on your PC.</string>
@@ -215,7 +218,7 @@
     <string name="background_on">Allowed to stay connected in the background</string>
     <string name="settings_background_title">Background &amp; battery</string>
     <string name="settings_run_in_background">Run in the background</string>
-    <string name="settings_run_in_background_hint">Keeps this phone reachable from your PC. When off, NectarLink connects only while it\'s open, and the notification goes away.</string>
+    <string name="settings_run_in_background_hint">Keeps this phone reachable from your PC. Off: connects only while the app is open.</string>
     <string name="home_background_off_title">Background connection is off</string>
     <string name="home_background_off_text">NectarLink connects only while the app is open. Turn it on to keep this phone reachable from your PC.</string>
     <string name="battery_open_oem_settings">Battery settings</string>
@@ -229,10 +232,6 @@
     <string name="action_manage">Manage</string>
     <string name="action_app_info">App info</string>
     <string name="theme_hive">Hive</string>
-    <string name="hive_invite_title">Try Hive, the new theme</string>
-    <string name="hive_invite_text">Honey on charcoal or warm wax, with a living honeycomb behind the app. Change it any time in Settings.</string>
-    <string name="hive_invite_try">Try Hive</string>
-    <string name="hive_invite_dismiss">Not now</string>
     <string name="settings_comb_motion">Animated comb</string>
     <string name="settings_comb_motion_hint">The honeycomb breathes and pulses. It holds still with Remove animations or battery saver on.</string>
     <string name="theme_bloom">Bloom</string>
@@ -535,22 +534,22 @@
     <string name="settings_data_storage_title">Data &amp; storage</string>
     <string name="data_action_clear">Clear</string>
     <string name="data_notifications_title">Notification history</string>
-    <string name="data_notifications_subtitle">Mirrored live to paired PCs · not stored on this phone (PCs keep dismissed notifications for up to 24 hours / 300 items)</string>
+    <string name="data_notifications_subtitle">Not stored on this phone · PCs keep dismissed ones 24 h</string>
     <string name="data_clipboard_title">Clipboard history</string>
-    <string name="data_clipboard_subtitle">Encrypted on device (passwords and OTPs excluded) · kept for 7 days, up to 50 clips / 128 MB</string>
+    <string name="data_clipboard_subtitle">Encrypted · kept 7 days, up to 50 clips</string>
     <plurals name="data_clipboard_count">
         <item quantity="one">%1$d clip stored</item>
         <item quantity="other">%1$d clips stored</item>
     </plurals>
     <string name="data_timeline_title">Timeline</string>
-    <string name="data_timeline_subtitle">Files, clips, links, photos, recordings and sessions · up to 5,000 items</string>
+    <string name="data_timeline_subtitle">Up to 5,000 items</string>
     <string name="data_messages_title">Message cache</string>
-    <string name="data_messages_subtitle">SMS and chat notifications are read live from Android; temporary MMS staging files are kept for up to 5 minutes (PCs cache chat threads for 90 days)</string>
+    <string name="data_messages_subtitle">Read live · MMS temp files kept 5 min</string>
     <string name="data_photos_title">Photo thumbnails &amp; camera cache</string>
-    <string name="data_photos_subtitle">Photos are read directly from MediaStore on demand; temporary Continuity Camera captures are kept for up to 24 hours</string>
+    <string name="data_photos_subtitle">Read on demand · camera captures kept 24 h</string>
     <string name="data_received_files_title">Received-file history</string>
-    <string name="data_received_files_subtitle">Transfer log kept with Timeline (saved files in Downloads are never deleted)</string>
-    <string name="data_clear_everything_hint">Deletes clipboard history, Timeline, transfer records and caches. Paired PCs and settings are kept.</string>
+    <string name="data_received_files_subtitle">Files saved in Downloads are never deleted</string>
+    <string name="data_clear_everything_hint">Paired PCs and settings are kept.</string>
     <string name="data_clear_everything_button">Clear everything…</string>
     <string name="data_clear_everything_dialog_title">Clear all local data?</string>
     <string name="data_clear_everything_dialog_body">Deletes clipboard history, Timeline, received-file records and caches on this phone. Paired PCs and settings are kept.</string>
@@ -936,7 +935,7 @@
     <!-- 1. Notifications -->
     <string name="guide_notif_title">Notifications</string>
     <string name="guide_notif_summary">See phone notifications on your PC, dismiss them, or reply inline.</string>
-    <string name="guide_notif_where">Settings › Permissions › Notifications</string>
+    <string name="guide_notif_where">Settings › Permissions › Shared with your PC</string>
     <string name="guide_notif_needs">Notification access, Notifications toggle on for the PC</string>
     <string name="guide_notif_need_1">Android Notification Access enabled for NectarLink.</string>
     <string name="guide_notif_need_2">On Android 13+, Allow restricted settings enabled in App info if sideloaded.</string>
@@ -953,7 +952,7 @@
     <!-- 2. Calls -->
     <string name="guide_calls_title">Calls</string>
     <string name="guide_calls_summary">See incoming calls on your PC, answer or reject, and dial numbers from your desktop.</string>
-    <string name="guide_calls_where">Settings › Permissions › Calls, contacts and messages</string>
+    <string name="guide_calls_where">Settings › Permissions › Shared with your PC</string>
     <string name="guide_calls_needs">Phone, Call log, and Contacts permissions</string>
     <string name="guide_calls_need_1">Phone and Call log permissions granted on Android.</string>
     <string name="guide_calls_need_2">Contacts permission granted for caller names and photos.</string>
@@ -984,7 +983,7 @@
     <!-- 4. Messages -->
     <string name="guide_sms_title">Messages</string>
     <string name="guide_sms_summary">Read conversation threads, view MMS attachments, and send texts from your PC.</string>
-    <string name="guide_sms_where">Settings › Permissions › Calls, contacts and messages</string>
+    <string name="guide_sms_where">Settings › Permissions › Shared with your PC</string>
     <string name="guide_sms_needs">SMS and Contacts permissions</string>
     <string name="guide_sms_need_1">SMS permission granted on Android.</string>
     <string name="guide_sms_need_2">Contacts permission granted for contact names and avatars.</string>
@@ -1096,7 +1095,7 @@
     <!-- 12. Photos -->
     <string name="guide_photos_title">Photos</string>
     <string name="guide_photos_summary">Browse your phone\'s photos, screenshots, and videos on your PC and save full-resolution originals.</string>
-    <string name="guide_photos_where">Settings › Permissions › Photos and videos</string>
+    <string name="guide_photos_where">Settings › Permissions › Shared with your PC</string>
     <string name="guide_photos_needs">Photos and videos permission</string>
     <string name="guide_photos_need_1">Photos and videos permission granted on Android.</string>
     <string name="guide_photos_phone_1">Open Settings › Permissions › Photos and videos and tap Allow.</string>
@@ -1323,8 +1322,6 @@
     <string name="update_auto_text">New versions from GitHub install in the background.</string>
 
     <string name="home_guide_title">Guide</string>
-    <string name="home_whats_new_guide">What is new: Features guide</string>
-    <string name="home_guide_card_body">Explore every NectarLink feature, check live permissions, or tap Show me to jump straight to any control.</string>
     <string name="home_no_pc_paired">No PC paired yet</string>
     <string name="home_no_pc_body">Open NectarLink on your Windows or Linux PC to pair by QR code or local discovery, or reopen the setup walkthrough.</string>
     <string name="home_background_clipboard_title">Background clipboard &amp; full control</string>

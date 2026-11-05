@@ -53,7 +53,6 @@
     <string name="settings_dynamic_color_hint">使用壁纸的颜色。</string>
     <string name="settings_devices">电脑</string>
     <string name="settings_about">关于</string>
-    <string name="settings_notifications">通知</string>
     <string name="notifications_title">在电脑上显示通知</string>
     <string name="notifications_on">已开启。通知会显示在已配对的电脑上，可在那里回复或清除。</string>
     <string name="notifications_off">NectarLink需要通知使用权，才能把本手机的通知显示在电脑上。</string>
@@ -132,7 +131,6 @@
     </plurals>
     <string name="app_windows_text">显示在 %1$s 上。它们在这里运行，与屏幕上的内容并排显示。</string>
     <string name="action_close_all">全部关闭</string>
-    <string name="settings_calls_and_contacts">通话、联系人和消息</string>
     <string name="sms_title">从电脑收发短信</string>
     <string name="sms_on">已开启。对话会显示在电脑上，可在那里阅读和发送短信。</string>
     <string name="sms_off">从电脑阅读和发送短信。需要访问消息和联系人。</string>
@@ -143,6 +141,11 @@
     <string name="contacts_on">已开启。电脑上的通话和消息中可以使用你的联系人。</string>
     <string name="contacts_off">从电脑搜索联系人并拨打电话或发送短信。需要访问联系人。</string>
     <string name="settings_photos">照片和视频</string>
+    <string name="settings_phone_access">与电脑共享</string>
+    <string name="settings_access_all_allowed">已全部允许</string>
+    <string name="settings_access_some_allowed">已允许 %1$d/%2$d 项</string>
+    <string name="settings_access_show">显示</string>
+    <string name="settings_access_hide">隐藏</string>
     <string name="photos_title">电脑上的照片和视频</string>
     <string name="photos_on">已开启。你的照片、截图和视频可在电脑上查看。</string>
     <string name="photos_partial">仅共享了部分照片。允许全部即可在电脑上浏览整个相册。</string>
@@ -209,7 +212,7 @@
     <string name="background_on">已允许在后台保持连接</string>
     <string name="settings_background_title">后台与电池</string>
     <string name="settings_run_in_background">在后台运行</string>
-    <string name="settings_run_in_background_hint">让此手机可以被电脑访问。关闭时，NectarLink 仅在打开时连接，通知也会消失。</string>
+    <string name="settings_run_in_background_hint">让此手机可以被电脑访问。关闭时仅在应用打开时连接。</string>
     <string name="home_background_off_title">后台连接已关闭</string>
     <string name="home_background_off_text">NectarLink 仅在应用打开时连接。开启以保持此手机可被电脑访问。</string>
     <string name="battery_open_oem_settings">电池设置</string>
@@ -223,10 +226,6 @@
     <string name="action_manage">管理</string>
     <string name="action_app_info">应用信息</string>
     <string name="theme_hive">蜂巢</string>
-    <string name="hive_invite_title">试试新主题“蜂巢”</string>
-    <string name="hive_invite_text">炭黑或暖蜡底色上的蜜色，应用背后是鲜活的蜂巢。随时可在设置中更换。</string>
-    <string name="hive_invite_try">试用蜂巢</string>
-    <string name="hive_invite_dismiss">暂不</string>
     <string name="settings_comb_motion">动态蜂巢</string>
     <string name="settings_comb_motion_hint">蜂巢会呼吸与脉动。开启“移除动画”或省电模式后保持静止。</string>
     <string name="theme_bloom">绽放</string>
@@ -449,6 +448,8 @@
     <string name="storage_saf_hint">仅共享你选择的文件夹。</string>
     <string name="storage_add_folder">添加文件夹</string>
     <string name="storage_remove_folder">移除</string>
+    <string name="mirroring_pc_toggle">在此电脑上显示此手机的屏幕</string>
+    <string name="mirroring_pc_toggle_hint">默认开启。关闭后，此电脑无法镜像屏幕。</string>
     <string name="storage_pc_toggle">在文件资源管理器中浏览此手机的存储</string>
     <string name="storage_pc_toggle_hint">默认关闭。允许本机列出、打开、上传、重命名和删除你共享的文件。</string>
     <string name="storage_request_title">%1$s 想要浏览此手机的存储</string>
@@ -507,22 +508,22 @@
     <string name="settings_data_storage_title">数据和存储</string>
     <string name="data_action_clear">清除</string>
     <string name="data_notifications_title">通知历史记录</string>
-    <string name="data_notifications_subtitle">实时镜像到已配对的电脑 · 不存储在此手机上（电脑最多保留已清除的通知 24 小时 / 300 条）</string>
+    <string name="data_notifications_subtitle">不存储在此手机上 · 电脑保留已清除的通知 24 小时</string>
     <string name="data_clipboard_title">剪贴板历史记录</string>
-    <string name="data_clipboard_subtitle">在设备上加密（不含密码和一次性验证码）· 保留 7 天，最多 50 条 / 128 MB</string>
+    <string name="data_clipboard_subtitle">已加密 · 保留 7 天，最多 50 条</string>
     <plurals name="data_clipboard_count">
         <item quantity="one">已存储 %1$d 条剪贴板内容</item>
         <item quantity="other">已存储 %1$d 条剪贴板内容</item>
     </plurals>
     <string name="data_timeline_title">时间线</string>
-    <string name="data_timeline_subtitle">文件、片段、链接、照片、录制和会话 · 最多 5,000 条</string>
+    <string name="data_timeline_subtitle">最多 5,000 条</string>
     <string name="data_messages_title">消息缓存</string>
-    <string name="data_messages_subtitle">短信和聊天通知从 Android 实时读取；临时 MMS 暂存文件最多保留 5 分钟（电脑缓存聊天会话 90 天）</string>
+    <string name="data_messages_subtitle">实时读取 · 临时 MMS 文件保留 5 分钟</string>
     <string name="data_photos_title">照片缩略图和相机缓存</string>
-    <string name="data_photos_subtitle">照片按需直接从 MediaStore 读取；接续相机的临时拍摄内容最多保留 24 小时</string>
+    <string name="data_photos_subtitle">按需读取 · 相机拍摄内容保留 24 小时</string>
     <string name="data_received_files_title">接收文件历史记录</string>
-    <string name="data_received_files_subtitle">传输记录与时间线一同保留（下载中已保存的文件绝不会被删除）</string>
-    <string name="data_clear_everything_hint">删除剪贴板历史记录、时间线、传输记录和缓存。已配对的电脑和设置会保留。</string>
+    <string name="data_received_files_subtitle">下载中已保存的文件绝不会被删除</string>
+    <string name="data_clear_everything_hint">已配对的电脑和设置会保留。</string>
     <string name="data_clear_everything_button">清除全部…</string>
     <string name="data_clear_everything_dialog_title">清除所有本地数据？</string>
     <string name="data_clear_everything_dialog_body">删除此手机上的剪贴板历史记录、时间线、接收文件记录和缓存。已配对的电脑和设置会保留。</string>
@@ -850,7 +851,7 @@
     <string name="guide_fix_pair">配对</string>
     <string name="guide_notif_title">通知</string>
     <string name="guide_notif_summary">在电脑上查看手机通知，可直接忽略或就地回复。</string>
-    <string name="guide_notif_where">设置 › 权限 › 通知</string>
+    <string name="guide_notif_where">设置 › 权限 › 与电脑共享</string>
     <string name="guide_notif_needs">通知使用权，并为该电脑开启通知开关</string>
     <string name="guide_notif_need_1">已为 NectarLink 开启 Android 通知使用权。</string>
     <string name="guide_notif_need_2">在 Android 13 及以上，若为侧载安装，需在应用信息中允许受限设置。</string>
@@ -865,7 +866,7 @@
     <string name="guide_notif_limits">进行中的系统通知无法远程忽略。</string>
     <string name="guide_calls_title">通话</string>
     <string name="guide_calls_summary">在电脑上查看来电，接听或拒接，并可直接拨号。</string>
-    <string name="guide_calls_where">设置 › 权限 › 通话、联系人和短信</string>
+    <string name="guide_calls_where">设置 › 权限 › 与电脑共享</string>
     <string name="guide_calls_needs">电话、通话记录和联系人权限</string>
     <string name="guide_calls_need_1">已在 Android 上授予电话和通话记录权限。</string>
     <string name="guide_calls_need_2">已授予联系人权限，用于显示来电者姓名和照片。</string>
@@ -892,7 +893,7 @@
     <string name="guide_media_limits">实时电脑音频串流需要稳定的 Wi-Fi 或 USB 连接。</string>
     <string name="guide_sms_title">消息</string>
     <string name="guide_sms_summary">在电脑上阅读会话记录、查看彩信附件并发送短信。</string>
-    <string name="guide_sms_where">设置 › 权限 › 通话、联系人和短信</string>
+    <string name="guide_sms_where">设置 › 权限 › 与电脑共享</string>
     <string name="guide_sms_needs">短信和联系人权限</string>
     <string name="guide_sms_need_1">已在 Android 上授予短信权限。</string>
     <string name="guide_sms_need_2">已授予联系人权限，用于显示联系人姓名和头像。</string>
@@ -988,7 +989,7 @@
     <string name="guide_pc_files_limits">需要已配对电脑在线。</string>
     <string name="guide_photos_title">照片</string>
     <string name="guide_photos_summary">在电脑上浏览手机的照片、截图和视频，并保存全分辨率原图。</string>
-    <string name="guide_photos_where">设置 › 权限 › 照片和视频</string>
+    <string name="guide_photos_where">设置 › 权限 › 与电脑共享</string>
     <string name="guide_photos_needs">照片和视频权限</string>
     <string name="guide_photos_need_1">已在 Android 上授予照片和视频权限。</string>
     <string name="guide_photos_phone_1">打开设置 › 权限 › 照片和视频，然后点按允许。</string>
@@ -1183,8 +1184,6 @@
     <string name="update_auto_text">来自 GitHub 的新版本会在后台安装。</string>
 
     <string name="home_guide_title">指南</string>
-    <string name="home_whats_new_guide">新增：功能指南</string>
-    <string name="home_guide_card_body">了解 NectarLink 的每一项功能、查看实时权限状态，或点「带我去」直接跳到对应开关。</string>
     <string name="home_no_pc_paired">尚未配对电脑</string>
     <string name="home_no_pc_body">在 Windows 或 Linux 电脑上打开 NectarLink，用二维码或本地发现来配对，也可以重新打开设置向导。</string>
     <string name="home_background_clipboard_title">后台剪贴板与完全控制</string>

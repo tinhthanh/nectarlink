@@ -59,7 +59,6 @@
     <string name="settings_dynamic_color_hint">Farben deines Hintergrundbilds verwenden.</string>
     <string name="settings_devices">PCs</string>
     <string name="settings_about">Info</string>
-    <string name="settings_notifications">Benachrichtigungen</string>
     <string name="notifications_title">Benachrichtigungen auf deinem PC anzeigen</string>
     <string name="notifications_on">Ein: Benachrichtigungen erscheinen auf deinen gekoppelten PCs, wo du darauf antworten und sie verwerfen kannst.</string>
     <string name="notifications_off">NectarLink benötigt Benachrichtigungszugriff, um die Benachrichtigungen dieses Geräts auf deinem PC anzuzeigen.</string>
@@ -138,7 +137,6 @@
     </plurals>
     <string name="app_windows_text">Angezeigt auf %1$s. Sie laufen hier unabhängig neben deinem Gerätebildschirm.</string>
     <string name="action_close_all">Alle schließen</string>
-    <string name="settings_calls_and_contacts">Anrufe, Kontakte und Nachrichten</string>
     <string name="sms_title">SMS am PC schreiben</string>
     <string name="sms_on">Ein: Unterhaltungen erscheinen auf deinem PC, wo du SMS lesen und senden kannst.</string>
     <string name="sms_off">Lies und sende SMS an deinem PC. Benötigt Zugriff auf Nachrichten und Kontakte.</string>
@@ -149,6 +147,11 @@
     <string name="contacts_on">Ein: Deine Kontakte stehen in „Anrufe“ und „Nachrichten“ auf deinem PC zur Verfügung.</string>
     <string name="contacts_off">Durchsuche Kontakte und rufe vom PC aus an oder schreibe Nachrichten. Benötigt Zugriff auf Kontakte.</string>
     <string name="settings_photos">Fotos und Videos</string>
+    <string name="settings_phone_access">Mit deinem PC geteilt</string>
+    <string name="settings_access_all_allowed">Alles erlaubt</string>
+    <string name="settings_access_some_allowed">%1$d von %2$d erlaubt</string>
+    <string name="settings_access_show">Anzeigen</string>
+    <string name="settings_access_hide">Ausblenden</string>
     <string name="photos_title">Fotos und Videos auf deinem PC</string>
     <string name="photos_on">Ein: Deine Fotos, Screenshots und Videos sind auf deinem PC verfügbar.</string>
     <string name="photos_partial">Nur ausgewählte Fotos sind freigegeben. Erlaube alle, um deine gesamte Galerie am PC zu durchsuchen.</string>
@@ -215,7 +218,7 @@
     <string name="background_on">Verbindung im Hintergrund erlaubt</string>
     <string name="settings_background_title">Hintergrund &amp; Akku</string>
     <string name="settings_run_in_background">Im Hintergrund ausführen</string>
-    <string name="settings_run_in_background_hint">Hält dieses Gerät für deinen PC erreichbar. Wenn ausgeschaltet, verbindet sich NectarLink nur, solange die App geöffnet ist, und die Benachrichtigung wird ausgeblendet.</string>
+    <string name="settings_run_in_background_hint">Hält dieses Gerät für deinen PC erreichbar. Aus: Verbindung nur, solange die App geöffnet ist.</string>
     <string name="home_background_off_title">Hintergrundverbindung ist aus</string>
     <string name="home_background_off_text">NectarLink verbindet sich nur, solange die App geöffnet ist. Schalte sie ein, damit dieses Gerät für deinen PC erreichbar bleibt.</string>
     <string name="battery_open_oem_settings">Akkueinstellungen</string>
@@ -229,10 +232,6 @@
     <string name="action_manage">Verwalten</string>
     <string name="action_app_info">App-Info</string>
     <string name="theme_hive">Wabe</string>
-    <string name="hive_invite_title">Probiere „Wabe“, das neue Design</string>
-    <string name="hive_invite_text">Honig auf Anthrazit oder warmem Wachs, mit einer lebendigen Bienenwabe im Hintergrund der App. Jederzeit in den Einstellungen änderbar.</string>
-    <string name="hive_invite_try">Wabe ausprobieren</string>
-    <string name="hive_invite_dismiss">Jetzt nicht</string>
     <string name="settings_comb_motion">Animierte Wabe</string>
     <string name="settings_comb_motion_hint">Die Bienenwabe atmet und pulsiert sanft. Bei aktivierter Option „Animationen entfernen“ oder im Energiesparmodus bleibt sie ruhig.</string>
     <string name="theme_bloom">Blüte</string>
@@ -469,6 +468,8 @@
     <string name="storage_saf_hint">Teile nur die Ordner, die du auswählst.</string>
     <string name="storage_add_folder">Ordner hinzufügen</string>
     <string name="storage_remove_folder">Entfernen</string>
+    <string name="mirroring_pc_toggle">Bildschirm dieses Geräts auf diesem PC anzeigen</string>
+    <string name="mirroring_pc_toggle_hint">Standardmäßig ein. Wenn ausgeschaltet, kann dieser PC den Bildschirm nicht spiegeln.</string>
     <string name="storage_pc_toggle">Speicher dieses Geräts im Datei-Explorer durchsuchen</string>
     <string name="storage_pc_toggle_hint">Standardmäßig aus. Erlaubt diesem PC, deine freigegebenen Dateien aufzulisten, zu öffnen, hochzuladen, umzubenennen und zu löschen.</string>
     <string name="storage_request_title">%1$s möchte den Speicher dieses Geräts durchsuchen</string>
@@ -533,22 +534,22 @@
     <string name="settings_data_storage_title">Daten &amp; Speicher</string>
     <string name="data_action_clear">Löschen</string>
     <string name="data_notifications_title">Benachrichtigungsverlauf</string>
-    <string name="data_notifications_subtitle">Live auf gekoppelte PCs gespiegelt · nicht auf diesem Gerät gespeichert (PCs behalten verworfene Benachrichtigungen für bis zu 24 Stunden / 300 Einträge)</string>
+    <string name="data_notifications_subtitle">Nicht auf diesem Gerät gespeichert · PCs behalten verworfene 24 Std.</string>
     <string name="data_clipboard_title">Zwischenablageverlauf</string>
-    <string name="data_clipboard_subtitle">Auf dem Gerät verschlüsselt (ohne Passwörter und Einmalcodes) · für 7 Tage gespeichert, bis zu 50 Einträge / 128 MB</string>
+    <string name="data_clipboard_subtitle">Verschlüsselt · 7 Tage gespeichert, bis zu 50 Einträge</string>
     <plurals name="data_clipboard_count">
         <item quantity="one">%1$d Eintrag gespeichert</item>
         <item quantity="other">%1$d Einträge gespeichert</item>
     </plurals>
     <string name="data_timeline_title">Zeitverlauf</string>
-    <string name="data_timeline_subtitle">Dateien, Zwischenablage-Einträge, Links, Fotos, Aufnahmen und Sitzungen · bis zu 5.000 Einträge</string>
+    <string name="data_timeline_subtitle">Bis zu 5.000 Einträge</string>
     <string name="data_messages_title">Nachrichten-Cache</string>
-    <string name="data_messages_subtitle">SMS und Chat-Benachrichtigungen werden live aus Android gelesen; temporäre MMS-Zwischendateien werden bis zu 5 Minuten behalten (PCs speichern Chatverläufe für 90 Tage)</string>
+    <string name="data_messages_subtitle">Live gelesen · MMS-Zwischendateien 5 Min. behalten</string>
     <string name="data_photos_title">Foto-Vorschaubilder &amp; Kamera-Cache</string>
-    <string name="data_photos_subtitle">Fotos werden bei Bedarf direkt aus dem MediaStore gelesen; temporäre Kamera-Aufnahmen für den PC werden bis zu 24 Stunden behalten</string>
+    <string name="data_photos_subtitle">Bei Bedarf gelesen · Kamera-Aufnahmen 24 Std. behalten</string>
     <string name="data_received_files_title">Verlauf empfangener Dateien</string>
-    <string name="data_received_files_subtitle">Übertragungsprotokoll im Zeitverlauf gespeichert (gespeicherte Dateien im Ordner „Downloads“ werden niemals gelöscht)</string>
-    <string name="data_clear_everything_hint">Löscht Zwischenablageverlauf, Zeitverlauf, Übertragungsprotokolle und Caches. Gekoppelte PCs und Einstellungen bleiben erhalten.</string>
+    <string name="data_received_files_subtitle">Dateien in „Downloads“ werden nie gelöscht</string>
+    <string name="data_clear_everything_hint">Gekoppelte PCs und Einstellungen bleiben erhalten.</string>
     <string name="data_clear_everything_button">Alles löschen…</string>
     <string name="data_clear_everything_dialog_title">Alle lokalen Daten löschen?</string>
     <string name="data_clear_everything_dialog_body">Löscht Zwischenablageverlauf, Zeitverlauf, Protokolle empfangener Dateien und Caches auf diesem Gerät. Gekoppelte PCs und Einstellungen bleiben erhalten.</string>
@@ -934,7 +935,7 @@
     <!-- 1. Notifications -->
     <string name="guide_notif_title">Benachrichtigungen</string>
     <string name="guide_notif_summary">Gerätebenachrichtigungen auf deinem PC sehen, verwerfen oder direkt beantworten.</string>
-    <string name="guide_notif_where">Einstellungen › Berechtigungen › Benachrichtigungen</string>
+    <string name="guide_notif_where">Einstellungen › Berechtigungen › Mit deinem PC geteilt</string>
     <string name="guide_notif_needs">Benachrichtigungszugriff, Schalter „Benachrichtigungen“ für den PC aktiviert</string>
     <string name="guide_notif_need_1">Android-Benachrichtigungszugriff für NectarLink aktiviert.</string>
     <string name="guide_notif_need_2">Ab Android 13 bei manueller APK-Installation „Eingeschränkte Einstellungen zulassen“ in der App-Info aktiviert.</string>
@@ -951,7 +952,7 @@
     <!-- 2. Calls -->
     <string name="guide_calls_title">Anrufe</string>
     <string name="guide_calls_summary">Eingehende Anrufe auf deinem PC sehen, annehmen oder ablehnen und Rufnummern vom Desktop aus wählen.</string>
-    <string name="guide_calls_where">Einstellungen › Berechtigungen › Anrufe, Kontakte und Nachrichten</string>
+    <string name="guide_calls_where">Einstellungen › Berechtigungen › Mit deinem PC geteilt</string>
     <string name="guide_calls_needs">Berechtigungen für Telefon, Anrufliste und Kontakte</string>
     <string name="guide_calls_need_1">Berechtigungen für Telefon und Anrufliste unter Android erteilt.</string>
     <string name="guide_calls_need_2">Kontakte-Berechtigung für Anrufernamen und Fotos erteilt.</string>
@@ -982,7 +983,7 @@
     <!-- 4. Messages -->
     <string name="guide_sms_title">Nachrichten</string>
     <string name="guide_sms_summary">Unterhaltungen lesen, MMS-Anhänge ansehen und SMS direkt vom PC aus senden.</string>
-    <string name="guide_sms_where">Einstellungen › Berechtigungen › Anrufe, Kontakte und Nachrichten</string>
+    <string name="guide_sms_where">Einstellungen › Berechtigungen › Mit deinem PC geteilt</string>
     <string name="guide_sms_needs">Berechtigungen für SMS und Kontakte</string>
     <string name="guide_sms_need_1">SMS-Berechtigung unter Android erteilt.</string>
     <string name="guide_sms_need_2">Kontakte-Berechtigung für Kontaktnamen und Profilbilder erteilt.</string>
@@ -1094,7 +1095,7 @@
     <!-- 12. Photos -->
     <string name="guide_photos_title">Fotos</string>
     <string name="guide_photos_summary">Durchsuche Fotos, Screenshots und Videos deines Geräts auf deinem PC und speichere Originale in voller Auflösung.</string>
-    <string name="guide_photos_where">Einstellungen › Berechtigungen › Fotos und Videos</string>
+    <string name="guide_photos_where">Einstellungen › Berechtigungen › Mit deinem PC geteilt</string>
     <string name="guide_photos_needs">Berechtigung für Fotos und Videos</string>
     <string name="guide_photos_need_1">Berechtigung für Fotos und Videos unter Android erteilt.</string>
     <string name="guide_photos_phone_1">Öffne Einstellungen › Berechtigungen › Fotos und Videos und tippe auf „Erlauben“.</string>
@@ -1321,8 +1322,6 @@
     <string name="update_auto_text">Neue Versionen von GitHub werden im Hintergrund installiert.</string>
 
     <string name="home_guide_title">Anleitung</string>
-    <string name="home_whats_new_guide">Neu: Funktionsübersicht</string>
-    <string name="home_guide_card_body">Entdecke jede Funktion von NectarLink, prüfe aktive Berechtigungen oder tippe auf „Zeig es mir“, um direkt zur jeweiligen Einstellung zu springen.</string>
     <string name="home_no_pc_paired">Noch kein PC gekoppelt</string>
     <string name="home_no_pc_body">Öffne NectarLink auf deinem Windows- oder Linux-PC, um per QR-Code oder lokaler Erkennung zu koppeln, oder starte den Einrichtungsassistenten erneut.</string>
     <string name="home_background_clipboard_title">Hintergrund-Zwischenablage &amp; volle Steuerung</string>

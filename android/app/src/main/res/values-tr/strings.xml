@@ -59,7 +59,6 @@
     <string name="settings_dynamic_color_hint">Duvar kağıdınızın renklerini kullanın.</string>
     <string name="settings_devices">Bilgisayarlar</string>
     <string name="settings_about">Hakkında</string>
-    <string name="settings_notifications">Bildirimler</string>
     <string name="notifications_title">Bildirimleri bilgisayarınızda göster</string>
     <string name="notifications_on">Açık. Bildirimler eşleştirilmiş bilgisayarlarınızda görünür; oradan yanıtlayabilir ve kapatabilirsiniz.</string>
     <string name="notifications_off">NectarLink\'in bu telefonun bildirimlerini bilgisayarınızda göstermesi için bildirim erişimine ihtiyacı var.</string>
@@ -138,7 +137,6 @@
     </plurals>
     <string name="app_windows_text">%1$s cihazında gösteriliyor. Burada, ekranınızdakilerin yanında çalışırlar.</string>
     <string name="action_close_all">Tümünü kapat</string>
-    <string name="settings_calls_and_contacts">Aramalar, kişiler ve mesajlar</string>
     <string name="sms_title">Bilgisayarınızdan mesajlaşın</string>
     <string name="sms_on">Açık. Konuşmalar bilgisayarınızda görünür; oradan mesaj okuyabilir ve gönderebilirsiniz.</string>
     <string name="sms_off">Bilgisayarınızdan mesaj okuyun ve gönderin. Mesajlara ve kişilere erişim gerekir.</string>
@@ -149,6 +147,11 @@
     <string name="contacts_on">Açık. Kişileriniz bilgisayarınızdaki Aramalar ve Mesajlar bölümlerinde kullanılabilir.</string>
     <string name="contacts_off">Bilgisayarınızdan kişilerde arayın, arama yapın veya mesaj gönderin. Kişilere erişim gerekir.</string>
     <string name="settings_photos">Fotoğraflar ve videolar</string>
+    <string name="settings_phone_access">Bilgisayarınızla paylaşılanlar</string>
+    <string name="settings_access_all_allowed">Tümüne izin verildi</string>
+    <string name="settings_access_some_allowed">%2$d izinden %1$d tanesi verildi</string>
+    <string name="settings_access_show">Göster</string>
+    <string name="settings_access_hide">Gizle</string>
     <string name="photos_title">Bilgisayarınızda fotoğraflar ve videolar</string>
     <string name="photos_on">Açık. Fotoğraflarınız, ekran görüntüleriniz ve videolarınız bilgisayarınızda kullanılabilir.</string>
     <string name="photos_partial">Yalnızca bazı fotoğraflar paylaşılıyor. Tüm galerinize bilgisayarınızdan göz atmak için tümüne izin verin.</string>
@@ -215,7 +218,7 @@
     <string name="background_on">Arka planda bağlı kalmasına izin verildi</string>
     <string name="settings_background_title">Arka plan ve pil</string>
     <string name="settings_run_in_background">Arka planda çalıştır</string>
-    <string name="settings_run_in_background_hint">Bu telefonu bilgisayarınızdan ulaşılabilir tutar. Kapalıyken NectarLink yalnızca açıkken bağlanır ve bildirim kaybolur.</string>
+    <string name="settings_run_in_background_hint">Bu telefonu bilgisayarınızdan ulaşılabilir tutar. Kapalıyken yalnızca uygulama açıkken bağlanır.</string>
     <string name="home_background_off_title">Arka plan bağlantısı kapalı</string>
     <string name="home_background_off_text">NectarLink yalnızca uygulama açıkken bağlanır. Bu telefonu bilgisayarınızdan ulaşılabilir tutmak için açın.</string>
     <string name="battery_open_oem_settings">Pil ayarları</string>
@@ -229,10 +232,6 @@
     <string name="action_manage">Yönet</string>
     <string name="action_app_info">Uygulama bilgileri</string>
     <string name="theme_hive">Hive</string>
-    <string name="hive_invite_title">Yeni tema Hive\'ı deneyin</string>
-    <string name="hive_invite_text">Kömür karası üzerinde bal ya da sıcak balmumu tonları, uygulamanın arkasında canlı bir petekle. İstediğiniz zaman Ayarlar\'dan değiştirin.</string>
-    <string name="hive_invite_try">Hive\'ı dene</string>
-    <string name="hive_invite_dismiss">Şimdi değil</string>
     <string name="settings_comb_motion">Hareketli petek</string>
     <string name="settings_comb_motion_hint">Petek nefes alır ve atar. Animasyonları kaldır veya pil tasarrufu açıkken durağan kalır.</string>
     <string name="theme_bloom">Bloom</string>
@@ -469,6 +468,8 @@
     <string name="storage_saf_hint">Yalnızca seçtiğiniz klasörleri paylaşın.</string>
     <string name="storage_add_folder">Klasör ekle</string>
     <string name="storage_remove_folder">Kaldır</string>
+    <string name="mirroring_pc_toggle">Bu telefonun ekranını bu bilgisayarda göster</string>
+    <string name="mirroring_pc_toggle_hint">Varsayılan olarak açık. Kapatırsanız bu bilgisayar ekranı yansıtamaz.</string>
     <string name="storage_pc_toggle">Bu telefonun depolama alanına Dosya Gezgini\'nden göz at</string>
     <string name="storage_pc_toggle_hint">Varsayılan olarak kapalı. Bu bilgisayarın paylaşılan dosyalarınızı listelemesine, açmasına, yüklemesine, yeniden adlandırmasına ve silmesine olanak tanır.</string>
     <string name="storage_request_title">%1$s bu telefonun depolama alanına göz atmak istiyor</string>
@@ -533,22 +534,22 @@
     <string name="settings_data_storage_title">Veri ve depolama</string>
     <string name="data_action_clear">Temizle</string>
     <string name="data_notifications_title">Bildirim geçmişi</string>
-    <string name="data_notifications_subtitle">Eşleştirilmiş bilgisayarlara canlı yansıtılır · bu telefonda saklanmaz (bilgisayarlar kapatılan bildirimleri en fazla 24 saat / 300 öğe saklar)</string>
+    <string name="data_notifications_subtitle">Bu telefonda saklanmaz · bilgisayarlar kapatılanları 24 saat tutar</string>
     <string name="data_clipboard_title">Pano geçmişi</string>
-    <string name="data_clipboard_subtitle">Cihazda şifreli (parolalar ve tek kullanımlık kodlar hariç) · 7 gün, en fazla 50 öğe / 128 MB saklanır</string>
+    <string name="data_clipboard_subtitle">Şifreli · 7 gün, en fazla 50 öğe saklanır</string>
     <plurals name="data_clipboard_count">
         <item quantity="one">%1$d pano öğesi kayıtlı</item>
         <item quantity="other">%1$d pano öğesi kayıtlı</item>
     </plurals>
     <string name="data_timeline_title">Zaman Çizelgesi</string>
-    <string name="data_timeline_subtitle">Dosyalar, pano öğeleri, bağlantılar, fotoğraflar, kayıtlar ve oturumlar · en fazla 5.000 öğe</string>
+    <string name="data_timeline_subtitle">En fazla 5.000 öğe</string>
     <string name="data_messages_title">Mesaj önbelleği</string>
-    <string name="data_messages_subtitle">SMS ve sohbet bildirimleri Android\'den canlı okunur; geçici MMS hazırlık dosyaları en fazla 5 dakika saklanır (bilgisayarlar sohbetleri 90 gün önbellekte tutar)</string>
+    <string name="data_messages_subtitle">Canlı okunur · geçici MMS dosyaları 5 dk saklanır</string>
     <string name="data_photos_title">Fotoğraf küçük resimleri ve kamera önbelleği</string>
-    <string name="data_photos_subtitle">Fotoğraflar gerektiğinde doğrudan MediaStore\'dan okunur; geçici Continuity Camera çekimleri en fazla 24 saat saklanır</string>
+    <string name="data_photos_subtitle">Gerektiğinde okunur · kamera çekimleri 24 saat saklanır</string>
     <string name="data_received_files_title">Alınan dosya geçmişi</string>
-    <string name="data_received_files_subtitle">Aktarım günlüğü Zaman Çizelgesi ile birlikte saklanır (İndirilenler\'e kaydedilen dosyalar asla silinmez)</string>
-    <string name="data_clear_everything_hint">Pano geçmişini, Zaman Çizelgesi\'ni, aktarım kayıtlarını ve önbellekleri siler. Eşleştirilmiş bilgisayarlar ve ayarlar korunur.</string>
+    <string name="data_received_files_subtitle">İndirilenler\'e kaydedilen dosyalar asla silinmez</string>
+    <string name="data_clear_everything_hint">Eşleştirilmiş bilgisayarlar ve ayarlar korunur.</string>
     <string name="data_clear_everything_button">Her şeyi temizle…</string>
     <string name="data_clear_everything_dialog_title">Tüm yerel veriler temizlensin mi?</string>
     <string name="data_clear_everything_dialog_body">Bu telefondaki pano geçmişini, Zaman Çizelgesi\'ni, alınan dosya kayıtlarını ve önbellekleri siler. Eşleştirilmiş bilgisayarlar ve ayarlar korunur.</string>
@@ -933,7 +934,7 @@
     <!-- 1. Notifications -->
     <string name="guide_notif_title">Bildirimler</string>
     <string name="guide_notif_summary">Telefon bildirimlerini bilgisayarınızda görün, kapatın veya doğrudan yanıtlayın.</string>
-    <string name="guide_notif_where">Ayarlar › İzinler › Bildirimler</string>
+    <string name="guide_notif_where">Ayarlar › İzinler › Bilgisayarınızla paylaşılanlar</string>
     <string name="guide_notif_needs">Bildirim erişimi, bilgisayar için Bildirimler anahtarı açık</string>
     <string name="guide_notif_need_1">NectarLink için Android Bildirim erişimi etkin.</string>
     <string name="guide_notif_need_2">Android 13 ve üzerinde, uygulama dosyadan kurulduysa Uygulama bilgileri\'nde Kısıtlanmış ayarlara izin ver etkin.</string>
@@ -950,7 +951,7 @@
     <!-- 2. Calls -->
     <string name="guide_calls_title">Aramalar</string>
     <string name="guide_calls_summary">Gelen aramaları bilgisayarınızda görün, yanıtlayın veya reddedin ve masaüstünüzden numara arayın.</string>
-    <string name="guide_calls_where">Ayarlar › İzinler › Aramalar, kişiler ve mesajlar</string>
+    <string name="guide_calls_where">Ayarlar › İzinler › Bilgisayarınızla paylaşılanlar</string>
     <string name="guide_calls_needs">Telefon, Arama kayıtları ve Kişiler izinleri</string>
     <string name="guide_calls_need_1">Android\'de Telefon ve Arama kayıtları izinleri verilmiş.</string>
     <string name="guide_calls_need_2">Arayan adları ve fotoğrafları için Kişiler izni verilmiş.</string>
@@ -981,7 +982,7 @@
     <!-- 4. Messages -->
     <string name="guide_sms_title">Mesajlar</string>
     <string name="guide_sms_summary">Konuşmaları okuyun, MMS eklerini görüntüleyin ve bilgisayarınızdan mesaj gönderin.</string>
-    <string name="guide_sms_where">Ayarlar › İzinler › Aramalar, kişiler ve mesajlar</string>
+    <string name="guide_sms_where">Ayarlar › İzinler › Bilgisayarınızla paylaşılanlar</string>
     <string name="guide_sms_needs">SMS ve Kişiler izinleri</string>
     <string name="guide_sms_need_1">Android\'de SMS izni verilmiş.</string>
     <string name="guide_sms_need_2">Kişi adları ve profil resimleri için Kişiler izni verilmiş.</string>
@@ -1093,7 +1094,7 @@
     <!-- 12. Photos -->
     <string name="guide_photos_title">Fotoğraflar</string>
     <string name="guide_photos_summary">Telefonunuzdaki fotoğraflara, ekran görüntülerine ve videolara bilgisayarınızdan göz atın ve tam çözünürlüklü orijinalleri kaydedin.</string>
-    <string name="guide_photos_where">Ayarlar › İzinler › Fotoğraflar ve videolar</string>
+    <string name="guide_photos_where">Ayarlar › İzinler › Bilgisayarınızla paylaşılanlar</string>
     <string name="guide_photos_needs">Fotoğraflar ve videolar izni</string>
     <string name="guide_photos_need_1">Android\'de Fotoğraflar ve videolar izni verilmiş.</string>
     <string name="guide_photos_phone_1">Ayarlar › İzinler › Fotoğraflar ve videolar\'ı açın ve İzin ver\'e dokunun.</string>
@@ -1320,8 +1321,6 @@
     <string name="update_auto_text">GitHub\'daki yeni sürümler arka planda kurulur.</string>
 
     <string name="home_guide_title">Rehber</string>
-    <string name="home_whats_new_guide">Yenilikler: Özellik rehberi</string>
-    <string name="home_guide_card_body">Tüm NectarLink özelliklerini keşfedin, izinleri canlı olarak kontrol edin veya herhangi bir kontrole doğrudan gitmek için Göster\'e dokunun.</string>
     <string name="home_no_pc_paired">Henüz eşleştirilmiş bilgisayar yok</string>
     <string name="home_no_pc_body">QR kodu veya yerel keşifle eşleştirmek için Windows ya da Linux bilgisayarınızda NectarLink\'i açın veya kurulum rehberini yeniden açın.</string>
     <string name="home_background_clipboard_title">Arka planda pano ve tam kontrol</string>
