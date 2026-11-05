@@ -257,153 +257,6 @@ Item {
             y: Theme.contentPadding
             spacing: Theme.gutter
 
-            // Gentle "What's new" banner for returning or upgraded users.
-            Card {
-                id: whatsNewCard
-                width: column.width
-                visible: Preferences.walkthroughCompleted && !Preferences.whatsNewDismissed
-                padding: 16
-                Item {
-                    width: parent.width
-                    height: Math.max(whatsNewTextCol.implicitHeight, whatsNewBtnRow.implicitHeight)
-                    Column {
-                        id: whatsNewTextCol
-                        anchors.left: parent.left
-                        anchors.right: whatsNewBtnRow.left
-                        anchors.rightMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 4
-                        Txt {
-                            width: parent.width
-                            role: "title"
-                            text: qsTr("New: Features guide")
-                            wrapMode: Text.WordWrap
-                        }
-                        Txt {
-                            width: parent.width
-                            role: "bodySmall"
-                            muted: true
-                            text: qsTr("See what each feature needs and where to find it.")
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                    Row {
-                        id: whatsNewBtnRow
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-                        Button {
-                            variant: "text"
-                            size: "sm"
-                            text: qsTr("Dismiss")
-                            onClicked: Preferences.whatsNewDismissed = true
-                        }
-                        Button {
-                            variant: "tonal"
-                            size: "sm"
-                            iconPath: Icons.book
-                            text: qsTr("Open features guide")
-                            onClicked: {
-                                Preferences.whatsNewDismissed = true
-                                AppController.currentPage = "guide"
-                            }
-                        }
-                    }
-                }
-            }
-
-            // A one-time invitation to try Hive, after the What's new card.
-            Card {
-                id: hiveInvite
-                width: column.width
-                visible: Preferences.walkthroughCompleted && Preferences.whatsNewDismissed
-                         && !Preferences.hiveInviteDismissed && !Theme.hive
-                padding: 14
-                Binding {
-                    target: Theme
-                    property: "combPreviewShown"
-                    value: hiveInvite.visible
-                }
-                Item {
-                    width: parent.width
-                    height: Math.max(hiveSample.height, hiveInviteText.implicitHeight, hiveInviteButtons.implicitHeight)
-
-                    // A small window onto the comb, in Hive's own colors.
-                    Rectangle {
-                        id: hiveSample
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 56; height: 56
-                        radius: 14
-                        color: Theme.dark ? "#121214" : "#FFF8F3"
-                        border.width: 1
-                        border.color: Theme.dark ? Qt.rgba(1.0, 0.73, 0.37, 0.24) : Qt.rgba(0.54, 0.32, 0.0, 0.20)
-                        HiveBackdrop {
-                            anchors.fill: parent
-                            corner: parent.radius
-                            ownClock: false
-                            growIn: false
-                            time: Theme.combTime
-                            animate: !Theme.reduceMotion && !AppController.powerSaver
-                            cell: 9
-                            lineColor: Theme.dark ? Qt.rgba(1.0, 0.73, 0.37, 0.28) : Qt.rgba(0.54, 0.32, 0.0, 0.16)
-                            glowColor: Theme.dark ? Qt.rgba(1.0, 0.62, 0.18, 0.70) : Qt.rgba(1.0, 0.72, 0.37, 0.75)
-                            origin: Qt.point(width / 2, height / 2)
-                        }
-                        Icon {
-                            anchors.centerIn: parent
-                            width: 22; height: 22
-                            path: Icons.mark
-                            stroke: 2.2
-                            color: Theme.dark ? "#FFB95F" : "#8A5100"
-                        }
-                    }
-                    Column {
-                        id: hiveInviteText
-                        anchors.left: hiveSample.right
-                        anchors.leftMargin: 14
-                        anchors.right: hiveInviteButtons.left
-                        anchors.rightMargin: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 4
-                        Txt {
-                            width: parent.width
-                            role: "title"
-                            text: qsTr("Try Hive, the new theme")
-                            wrapMode: Text.WordWrap
-                        }
-                        Txt {
-                            width: parent.width
-                            role: "bodySmall"
-                            muted: true
-                            text: qsTr("Honey on charcoal or warm wax, with a living honeycomb behind the app. Change it any time in Settings › Appearance.")
-                            wrapMode: Text.WordWrap
-                        }
-                    }
-                    Row {
-                        id: hiveInviteButtons
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: 8
-                        Button {
-                            variant: "text"
-                            size: "sm"
-                            text: qsTr("Not now")
-                            onClicked: Preferences.hiveInviteDismissed = true
-                        }
-                        Button {
-                            variant: "tonal"
-                            size: "sm"
-                            iconPath: Icons.sparkle
-                            text: qsTr("Try Hive")
-                            onClicked: {
-                                Preferences.hiveInviteDismissed = true
-                                Preferences.theme = "hive"
-                            }
-                        }
-                    }
-                }
-            }
-
             // A phone on a USB cable that still needs something (components/UsbSetupCard.qml).
             UsbSetupCard {
                 id: usbCard
@@ -423,12 +276,26 @@ Item {
                 padding: 16
                 readonly property var phones: (usbCard.usb.phones || []).filter(p =>
                     p.state === "device" && (!p.claudeReady || !usbCard.usb.claudeRegistered))
-                visible: usbCard.usb.claudeInstalled === true && phones.length > 0
+                visible: usbCard.usb.claudeInstalled === true && phones.length > 0 && !Preferences.claudeCardHidden
 
                 Column {
                     width: parent.width
                     spacing: 12
-                    Txt { role: "title"; text: qsTr("Claude on your phone") }
+                    Item {
+                        width: parent.width
+                        height: Math.max(claudeTitle.implicitHeight, claudeHide.implicitHeight)
+                        Txt { id: claudeTitle; role: "title"; text: qsTr("Claude on your phone"); anchors.verticalCenter: parent.verticalCenter }
+                        // Back in Settings › Connection & About.
+                        Button {
+                            id: claudeHide
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            variant: "text"
+                            size: "sm"
+                            text: qsTr("Hide")
+                            onClicked: Preferences.claudeCardHidden = true
+                        }
+                    }
                     Repeater {
                         model: claudeCard.phones
                         delegate: Item {
@@ -507,20 +374,6 @@ Item {
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 8
-                        Button {
-                            variant: "text"
-                            size: "sm"
-                            iconPath: Icons.book
-                            text: qsTr("Features guide")
-                            onClicked: AppController.currentPage = "guide"
-                        }
-                        Button {
-                            variant: "tonal"
-                            size: "sm"
-                            iconPath: Icons.compass
-                            text: qsTr("Setup walkthrough")
-                            onClicked: Preferences.restartWalkthrough()
-                        }
                         Button {
                             size: "sm"
                             iconPath: Icons.plus

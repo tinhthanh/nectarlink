@@ -519,6 +519,9 @@ pub struct Settings {
     /// Whether the card on Home inviting to try Hive has been answered.
     #[serde(default, alias = "hive_invite_dismissed")]
     pub hive_invite_dismissed: bool,
+    /// Whether the "Claude on your phone" card on Home has been hidden.
+    #[serde(default)]
+    pub claude_card_hidden: bool,
     /// OBS Studio's WebSocket port, for `obs:` Deck commands.
     pub obs_port: u16,
     /// OBS's WebSocket password, encrypted with Windows DPAPI (base64). Never stored in clear.
@@ -601,6 +604,7 @@ impl Default for Settings {
             walkthrough_step: 0,
             whats_new_dismissed: false,
             hive_invite_dismissed: false,
+            claude_card_hidden: false,
             obs_port: crate::obs::DEFAULT_PORT,
             obs_password: None,
             window_screen: None,
@@ -842,6 +846,7 @@ mod tests {
             walkthrough_step: 4,
             whats_new_dismissed: true,
             hive_invite_dismissed: true,
+            claude_card_hidden: true,
             obs_port: crate::obs::DEFAULT_PORT,
             obs_password: None,
             window_screen: Some("DP-1".into()),

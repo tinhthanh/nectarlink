@@ -3380,6 +3380,18 @@ Item {
                                 onClicked: AppController.currentPage = "guide"
                             }
                         }
+                        Divider { width: parent.width }
+                        ListRow {
+                            width: parent.width
+                            iconPath: Icons.phone
+                            title: qsTr("Claude setup on Home")
+                            description: qsTr("Show the card that lets Claude Code use a phone on the USB cable.")
+                            Toggle {
+                                label: qsTr("Claude setup on Home")
+                                checked: !Preferences.claudeCardHidden
+                                onToggled: (on) => Preferences.claudeCardHidden = !on
+                            }
+                        }
                     }
                 }
             }

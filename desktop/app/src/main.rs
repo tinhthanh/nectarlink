@@ -637,14 +637,6 @@ fn main() -> ExitCode {
         updater::start();
         match (updater::note_running_version(&data_dir), options.updated) {
             (Some(previous), _) => {
-                // A new version invites to try Hive again, once.
-                let mut saved = settings::Settings::load(&data_dir);
-                if saved.hive_invite_dismissed {
-                    saved.hive_invite_dismissed = false;
-                    if let Err(e) = saved.save(&data_dir) {
-                        tracing::warn!(error = %e, "can't save settings");
-                    }
-                }
                 updater::announce_update(previous, !options.minimized);
             }
             // Reopened by the relauncher, still on this version.
