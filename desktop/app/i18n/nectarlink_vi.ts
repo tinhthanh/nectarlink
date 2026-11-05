@@ -3954,7 +3954,7 @@ Yêu cầu
     <message>
         <location filename="../qml/pages/HomePage.qml" line="1945"/>
         <source>DND</source>
-        <translation>KLP</translation>
+        <translation>Yên tĩnh</translation>
     </message>
     <message>
         <location filename="../qml/pages/HomePage.qml" line="1946"/>
@@ -3984,7 +3984,7 @@ Yêu cầu
     <message>
         <location filename="../qml/pages/HomePage.qml" line="1991"/>
         <source>Hotspot</source>
-        <translation>Điểm phát sóng</translation>
+        <translation>Phát Wi-Fi</translation>
     </message>
     <message>
         <location filename="../qml/pages/HomePage.qml" line="1992"/>
