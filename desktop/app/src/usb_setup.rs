@@ -843,13 +843,34 @@ fn ensure_adb_server() -> bool {
     let Some(adb) = find_adb() else { return false };
     // ADB_MDNS=0: no mDNS discovery (wireless debugging, which this doesn't
     // use), so adb listens on loopback only and Windows Firewall doesn't ask.
-    let started = hidden(Command::new(&adb).arg("start-server").env("ADB_MDNS", "0"))
-        .status()
-        .is_ok_and(|s| s.success());
-    if !started {
-        tracing::warn!(adb = %adb.display(), "adb start-server failed");
+    let start = || {
+        hidden(Command::new(&adb).arg("start-server").env("ADB_MDNS", "0")).status().is_ok_and(|s| s.success())
+    };
+    // `start-server` gives up after a few seconds, but a slow first start
+    // (x64 adb emulated on Windows on ARM, antivirus scanning a fresh
+    // download) can still finish: wait for the server, then try once more.
+    for attempt in 0..2 {
+        if start() || adb_answers_within(ADB_START_GRACE) {
+            return true;
+        }
+        tracing::warn!(adb = %adb.display(), attempt, "adb start-server failed");
     }
-    started
+    false
+}
+
+/// How long a slow adb server may take to answer after `start-server` gave up.
+const ADB_START_GRACE: Duration = Duration::from_secs(20);
+
+/// Whether the adb server answers within `wait`.
+fn adb_answers_within(wait: Duration) -> bool {
+    let until = std::time::Instant::now() + wait;
+    while std::time::Instant::now() < until {
+        if std::net::TcpStream::connect_timeout(&DEFAULT_ADB_ADDR, Duration::from_millis(300)).is_ok() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(500));
+    }
+    false
 }
 
 fn exe(name: &str) -> String {

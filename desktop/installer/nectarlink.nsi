@@ -91,7 +91,10 @@ Var AdminOnly
 
 !macro ArchCheck
   ${If} "${ARCH}" == "x64"
+    ; Windows 11 on ARM runs x64 apps (emulated), so the x64 copy installs
+    ; there too when no ARM64 copy is at hand.
     ${IfNot} ${IsNativeAMD64}
+    ${AndIfNot} ${IsNativeARM64}
       MessageBox MB_ICONSTOP "This copy of ${DISPLAY} is for x64 PCs. Download the ARM64 version for this PC." /SD IDOK
       Abort
     ${EndIf}

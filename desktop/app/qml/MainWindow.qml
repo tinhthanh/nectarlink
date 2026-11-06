@@ -109,8 +109,11 @@ NativeWindow {
     readonly property string currentDeviceName: DeviceList.count > 0 && DeviceList.revision >= 0
         ? DeviceList.deviceNameAt(currentDeviceIndex) : ""
 
-    minimumWidth: Theme.layout.minWindow[0]
-    minimumHeight: Theme.layout.minWindow[1]
+    // Never larger than the screen it's on: on a small display (e.g. a VM at
+    // 800x600) a fixed minimum would push the window's edges off screen.
+    minimumWidth: Math.min(Theme.layout.minWindow[0], Screen.width > 0 ? Screen.width : Theme.layout.minWindow[0])
+    minimumHeight: Math.min(Theme.layout.minWindow[1],
+        Screen.height > 0 ? Screen.height - 48 : Theme.layout.minWindow[1])
     property string normalScreen: Preferences.windowScreen
     property int normalWidth: Math.max(minimumWidth, Preferences.windowWidth > 0 ? Preferences.windowWidth : 1120)
     property int normalHeight: Math.max(minimumHeight, Preferences.windowHeight > 0 ? Preferences.windowHeight : 740)
