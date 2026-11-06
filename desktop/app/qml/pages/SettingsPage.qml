@@ -2325,7 +2325,7 @@ Item {
                                     text: qsTr("Add folder")
                                     // For the phone selected in the app: a rule needs one.
                                     readonly property string phoneId: DeviceList.count > 0
-                                        ? DeviceList.deviceIdAt(Math.min(Math.max(0, AppController.currentDevice), DeviceList.count - 1)) || ""
+                                        ? DeviceList.revision >= 0 && DeviceList.deviceIdAt(Math.min(Math.max(0, AppController.currentDevice), DeviceList.count - 1)) || ""
                                         : ""
                                     enabled: phoneId.length > 0
                                     onClicked: folderSyncSheet.openFor(phoneId)

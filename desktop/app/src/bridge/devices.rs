@@ -36,6 +36,10 @@ pub mod qobject {
         #[qml_element]
         #[qml_singleton]
         #[qproperty(i32, count)]
+        /// Bumped whenever a device's id or name changes, so QML bindings
+        /// that read `deviceIdAt` / `deviceNameAt` re-evaluate even when
+        /// `count` stays the same (a phone paired again replaces its row).
+        #[qproperty(i32, revision)]
         type DeviceList = super::DeviceListRust;
     }
 
@@ -125,6 +129,7 @@ impl std::ops::Deref for Row {
 #[derive(Default)]
 pub struct DeviceListRust {
     count: i32,
+    revision: i32,
     rows: Vec<Row>,
 }
 
@@ -235,6 +240,8 @@ impl qobject::DeviceList {
         let new: Vec<Row> =
             core_host::host().hub.read(|s| s.devices.iter().cloned().map(Row::from_device).collect());
         let root = QModelIndex::default();
+        let names = |rows: &[Row]| rows.iter().map(|r| (r.id, r.info.name.clone())).collect::<Vec<_>>();
+        let renamed = names(&self.rows) != names(&new);
         for edit in diff(&self.rows, &new, |d| d.id) {
             match edit {
                 Edit::Remove(row) => {
@@ -263,7 +270,11 @@ impl qobject::DeviceList {
             }
         }
         let count = self.rows.len() as i32;
-        self.set_count(count);
+        self.as_mut().set_count(count);
+        if renamed {
+            let revision = self.revision.wrapping_add(1);
+            self.set_revision(revision);
+        }
     }
 
     pub fn data(&self, index: &QModelIndex, role: i32) -> QVariant {

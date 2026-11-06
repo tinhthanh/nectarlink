@@ -102,9 +102,11 @@ NativeWindow {
     }
     readonly property int currentDeviceIndex: DeviceList.count > 0
         ? Math.min(Math.max(0, AppController.currentDevice), DeviceList.count - 1) : 0
-    readonly property string currentDeviceId: DeviceList.count > 0
+    // `revision` changes when a row's id or name does (a phone paired again
+    // replaces its row while `count` stays the same).
+    readonly property string currentDeviceId: DeviceList.count > 0 && DeviceList.revision >= 0
         ? DeviceList.deviceIdAt(currentDeviceIndex) : ""
-    readonly property string currentDeviceName: DeviceList.count > 0
+    readonly property string currentDeviceName: DeviceList.count > 0 && DeviceList.revision >= 0
         ? DeviceList.deviceNameAt(currentDeviceIndex) : ""
 
     minimumWidth: Theme.layout.minWindow[0]

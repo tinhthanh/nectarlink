@@ -234,7 +234,7 @@ Window {
             return qsTr("%1 phone notification(s)").arg(NotificationList.count)
         if (mode === "waiting")
             return qsTr("%1 waiting").arg(TransferList.waitingCount)
-        return DeviceList.count > 0
+        return DeviceList.count > 0 && DeviceList.revision >= 0
             ? qsTr("Nectar Island · %1").arg(DeviceList.deviceNameAt(0))
             : qsTr("Nectar Island · Ready")
     }
@@ -267,7 +267,7 @@ Window {
         if (mode === "notification")
             return qsTr("Click to view in NectarLink")
         if (mode === "waiting") {
-            return DeviceList.count > 0
+            return DeviceList.count > 0 && DeviceList.revision >= 0
                 ? qsTr("Will send when %1 is back").arg(DeviceList.deviceNameAt(0))
                 : qsTr("Will send when connected")
         }
