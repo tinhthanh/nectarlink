@@ -106,6 +106,10 @@ fn default_local_api_port() -> u16 {
     DEFAULT_LOCAL_API_PORT
 }
 
+fn default_web_phone_port() -> u16 {
+    crate::web_phone::DEFAULT_PORT
+}
+
 fn default_window_width() -> u32 {
     DEFAULT_WINDOW_WIDTH
 }
@@ -463,6 +467,13 @@ pub struct Settings {
     /// TCP port on `127.0.0.1` for the localhost automation API.
     #[serde(default = "default_local_api_port", alias = "local_api_port")]
     pub local_api_port: u16,
+    /// Whether the web phone (answer and make the phone's calls from a browser on
+    /// this network, `https://<this PC>:<web_phone_port>`) is on (off by default).
+    #[serde(default, alias = "web_phone_enabled")]
+    pub web_phone_enabled: bool,
+    /// TCP port the web phone listens on, on every network of this PC.
+    #[serde(default = "default_web_phone_port", alias = "web_phone_port")]
+    pub web_phone_port: u16,
     /// Automatically place small incoming received files onto the Windows clipboard (`CF_HDROP`).
     #[serde(default = "default_true", alias = "clipboard_auto_copy_received_files")]
     pub clipboard_auto_copy_received_files: bool,
@@ -586,6 +597,8 @@ impl Default for Settings {
             shelf_hotkey: "Ctrl+Alt+S".into(),
             local_api_enabled: false,
             local_api_port: default_local_api_port(),
+            web_phone_enabled: false,
+            web_phone_port: default_web_phone_port(),
             clipboard_auto_copy_received_files: true,
             open_shared_files: false,
             flow_follow_clipboard: true,
@@ -828,6 +841,8 @@ mod tests {
             shelf_hotkey: "Ctrl+Alt+E".into(),
             local_api_enabled: true,
             local_api_port: 54321,
+            web_phone_enabled: false,
+            web_phone_port: 53330,
             clipboard_auto_copy_received_files: false,
             open_shared_files: true,
             flow_follow_clipboard: false,

@@ -1742,6 +1742,12 @@ impl Node {
         (port != 0).then_some(port)
     }
 
+    /// The adb serial and adb server of `peer` while it's connected to this PC
+    /// over USB, for starting the phone's own helpers on it (the call's sound).
+    pub fn usb_serial(&self, peer: &DeviceId) -> Option<(String, SocketAddr)> {
+        self.shared.usb_serials.lock().unwrap_or_else(|e| e.into_inner()).get(peer).cloned()
+    }
+
     /// Connects a PC-side USB tunnel to a forwarded phone loopback TCP address
     /// (`127.0.0.1:<port>`) and returns the phone's [`DeviceId`].
     pub async fn connect_usb_tunnel(&self, forwarded_tcp: SocketAddr) -> Result<DeviceId> {

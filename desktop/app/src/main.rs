@@ -26,6 +26,8 @@ mod input_share;
 mod launch;
 mod links;
 mod local_api;
+mod web_phone;
+mod call_audio;
 mod logging;
 mod mark;
 mod media;
@@ -620,6 +622,7 @@ fn main() -> ExitCode {
     webcam::init(&settings);
     phone_mic::init(&settings);
     local_api::init(&settings);
+    web_phone::init(&settings);
     win::widget::write_state_snapshot(&data_dir);
     win::tray::update_hotkeys(
         &settings.continuity_photo_hotkey,
@@ -713,6 +716,7 @@ fn main() -> ExitCode {
     pc_audio_stream::set_enabled(false);
     pc_mirror::stop_all();
     local_api::stop();
+    web_phone::stop();
     win::ble_beacon::stop();
     webcam::shutdown();
     storage::shutdown();

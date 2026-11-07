@@ -99,6 +99,13 @@ pub mod qobject {
         #[qproperty(i32, local_api_port)]
         /// Path to `<data_dir>/api-token.json` containing the bearer token.
         #[qproperty(QString, local_api_token_path)]
+        /// The web phone: answer and make the phone's calls from a browser on this network.
+        #[qproperty(bool, web_phone_enabled)]
+        /// The web phone's address with its access key, to open on another device ("" while off).
+        #[qproperty(QString, web_phone_url)]
+        /// The web phone link as a QR code (`QrCode` path and size).
+        #[qproperty(QString, web_phone_qr_path)]
+        #[qproperty(i32, web_phone_qr_size)]
         /// Copy received files (<= 10) to the Windows clipboard as CF_HDROP.
         #[qproperty(bool, clipboard_auto_copy_received_files)]
         /// Open a single file shared from the phone when it arrives.
@@ -333,6 +340,10 @@ pub struct PreferencesRust {
     local_api_enabled: bool,
     local_api_port: i32,
     local_api_token_path: QString,
+    web_phone_enabled: bool,
+    web_phone_url: QString,
+    web_phone_qr_path: QString,
+    web_phone_qr_size: i32,
     clipboard_auto_copy_received_files: bool,
     open_shared_files: bool,
     flow_follow_clipboard: bool,
@@ -426,6 +437,8 @@ impl cxx_qt::Initialize for qobject::Preferences {
         self.as_mut().set_local_api_port(i32::from(settings.local_api_port));
         let token_path = crate::local_api::token_file_path();
         self.as_mut().set_local_api_token_path(QString::from(&token_path.to_string_lossy().into_owned()));
+        self.as_mut().set_web_phone_enabled(settings.web_phone_enabled);
+        self.as_mut().show_web_phone_url();
         self.as_mut().set_clipboard_auto_copy_received_files(settings.clipboard_auto_copy_received_files);
         self.as_mut().set_open_shared_files(settings.open_shared_files);
         self.as_mut().set_flow_follow_clipboard(settings.flow_follow_clipboard);
@@ -668,6 +681,15 @@ impl cxx_qt::Initialize for qobject::Preferences {
             })
             .release();
         self.as_mut()
+            .on_web_phone_enabled_changed(|mut p| {
+                let settings = p.current_settings();
+                let _ = settings.save(&core_host::host().data_dir);
+                crate::web_phone::sync_from_settings();
+                p.as_mut().show_web_phone_url();
+                save_in_background(settings);
+            })
+            .release();
+        self.as_mut()
             .on_clipboard_auto_copy_received_files_changed(|p| {
                 crate::settings::set_clipboard_auto_copy_received_files(p.clipboard_auto_copy_received_files);
                 p.save();
@@ -735,6 +757,18 @@ impl cxx_qt::Initialize for qobject::Preferences {
         self.as_mut().on_claude_card_hidden_changed(|p| p.save()).release();
 
         super::subscribe(self.qt_thread(), crate::state::Changes::PREFS, Self::refresh_runtime_flags);
+    }
+}
+
+
+impl qobject::Preferences {
+    /// Shows the web phone's current link and its QR code.
+    fn show_web_phone_url(mut self: Pin<&mut Self>) {
+        let url = crate::web_phone::url();
+        let qr = (!url.is_empty()).then(|| crate::qr::encode(&url).ok()).flatten();
+        self.as_mut().set_web_phone_qr_path(QString::from(qr.as_ref().map(|q| q.path.as_str()).unwrap_or("")));
+        self.as_mut().set_web_phone_qr_size(qr.map_or(21, |q| q.size as i32));
+        self.as_mut().set_web_phone_url(QString::from(&url));
     }
 }
 
@@ -1080,6 +1114,8 @@ impl qobject::Preferences {
                 .ok()
                 .filter(|&port| port > 0)
                 .unwrap_or(crate::settings::DEFAULT_LOCAL_API_PORT),
+            web_phone_enabled: p.web_phone_enabled,
+            web_phone_port: crate::web_phone::configured_port(),
             clipboard_auto_copy_received_files: p.clipboard_auto_copy_received_files,
             open_shared_files: p.open_shared_files,
             flow_follow_clipboard: p.flow_follow_clipboard,

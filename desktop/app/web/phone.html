@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1b1f">
+<title>NectarLink Phone</title>
+<style>
+  :root {
+    --bg: #f6f6f9; --card: #ffffff; --text: #1b1b1f; --muted: #6b6b76; --line: #e3e3ea;
+    --accent: #6750a4; --green: #1e8e3e; --red: #d93025; --key: #eeeef3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121216; --card: #1d1d23; --text: #ececf1; --muted: #9a9aa6; --line: #2c2c35;
+      --accent: #cfbcff; --green: #34a853; --red: #f28b82; --key: #2a2a33; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 420px; margin: 0 auto; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: center; gap: 10px; margin: 4px 0 16px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: var(--green); }
+  .status { font-size: 13px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+  .who { font-size: 24px; font-weight: 600; text-align: center; word-break: break-word; }
+  .sub { text-align: center; color: var(--muted); margin-top: 4px; min-height: 22px; }
+  .row { display: flex; gap: 12px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+  button { font: inherit; border: 0; border-radius: 999px; padding: 14px 22px; cursor: pointer;
+    background: var(--key); color: var(--text); min-width: 64px; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.green { background: var(--green); color: #fff; }
+  button.red { background: var(--red); color: #fff; }
+  button.on { background: var(--accent); color: var(--bg); }
+  input { font: inherit; font-size: 26px; width: 100%; text-align: center; letter-spacing: 1px;
+    border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text); padding: 8px 0; outline: none; }
+  .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .pad button { font-size: 22px; padding: 14px 0; border-radius: 16px; }
+  .note { font-size: 13px; color: var(--muted); text-align: center; margin-top: 12px; }
+  .meter { height: 4px; border-radius: 2px; background: var(--line); margin-top: 12px; overflow: hidden; }
+  .meters { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; margin-top: 14px; }
+  .meters .meter { margin-top: 0; }
+  .mlabel { font-size: 12px; color: var(--muted); }
+  .meter i { display: block; height: 100%; width: 0; background: var(--green); transition: width .1s; }
+  .micpick { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .micpick select { flex: 1; min-width: 0; font: inherit; color: var(--text); background: var(--key);
+    border: 0; border-radius: 10px; padding: 8px; }
+  .hidden { display: none !important; }
+  .error { color: var(--red); text-align: center; font-size: 14px; min-height: 20px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="dot" id="dot"></span>
+    <h1 id="phoneName">NectarLink</h1>
+    <span class="status" id="phoneStatus"></span>
+  </header>
+
+  <section class="card hidden" id="noKey">
+    <div class="who" data-t="noKeyTitle"></div>
+    <div class="note" data-t="noKeyBody"></div>
+    <input id="keyInput" inputmode="url" autocomplete="off" style="font-size:15px;margin-top:14px" data-ph="pasteLink">
+    <div class="row"><button class="green" id="keyBtn" data-t="useLink"></button></div>
+  </section>
+
+  <section class="card hidden" id="callCard">
+    <div class="who" id="who"></div>
+    <div class="sub" id="callSub"></div>
+    <div class="row" id="ringingRow">
+      <button class="green" id="answer" data-t="answer"></button>
+      <button class="red" id="decline" data-t="decline"></button>
+      <button id="silence" data-t="silence"></button>
+    </div>
+    <div class="row hidden" id="activeRow">
+      <button id="audioBtn" data-t="talkHere"></button>
+      <button id="muteBtn" data-t="mute"></button>
+      <button id="keysBtn" data-t="keypad"></button>
+      <button class="red" id="hangup" data-t="hangUp"></button>
+    </div>
+    <div class="meters hidden" id="meter">
+      <div class="mlabel" data-t="them"></div><div class="meter"><i id="meterBar"></i></div>
+      <div class="mlabel" data-t="you"></div><div class="meter"><i id="micBar"></i></div>
+    </div>
+    <div class="pad hidden" id="dtmfPad"></div>
+    <label class="micpick hidden" id="micPick"><span data-t="micLabel"></span>
+      <select id="micSelect"></select></label>
+    <div class="note" id="audioNote"></div>
+  </section>
+
+  <section class="card hidden" id="dialCard">
+    <input id="number" inputmode="tel" autocomplete="off" aria-label="Number">
+    <div class="pad" id="dialPad"></div>
+    <div class="row">
+      <button class="green" id="callBtn" data-t="call"></button>
+      <button id="backBtn" aria-label="Delete">⌫</button>
+    </div>
+    <div class="note" id="dialNote"></div>
+  </section>
+
+  <div class="error" id="error"></div>
+  <div class="note" id="ringNote"></div>
+</main>
+<script>
+"use strict";
+const T = {
+  en: { noKeyTitle: "Open the link from NectarLink", noKeyBody: "On the computer: NectarLink → Settings → Web phone. Open its link (or scan its QR code) on this device, or paste the link here.", pasteLink: "Paste the link", useLink: "Open",
+    answer: "Answer", decline: "Decline", silence: "Silence", talkHere: "Talk here", talking: "Talking here", mute: "Mute", muted: "Muted",
+    them: "Caller", you: "You", keypad: "Keypad", hangUp: "Hang up", call: "Call", incoming: "Incoming call", outgoing: "Calling…", onCall: "On call",
+    unknown: "Unknown number", offline: "offline", online: "online", usb: "online · USB", noPhone: "No phone",
+    audioUsb: "Plug the phone into the computer with its cable to hear the call here.", audioOn: "The call's sound is on this device. Headphones avoid echo.",
+    audioPhone: "The call's sound is on the phone.", enableRing: "Tap anywhere to let this page ring for incoming calls.",
+    ringOn: "This page rings for incoming calls while it's open.", micDenied: "The browser didn't allow the microphone.", micLabel: "Microphone",
+    needsHttps: "The microphone needs the https:// link from NectarLink.", wrongKey: "This link's key is no longer valid. Open the new link from NectarLink.",
+    unreachable: "Can't reach NectarLink on the computer." },
+  vi: { noKeyTitle: "Mở link từ NectarLink", noKeyBody: "Trên máy tính: NectarLink → Cài đặt → Web phone. Mở link (hoặc quét mã QR) trên thiết bị này, hoặc dán link vào đây.", pasteLink: "Dán link vào đây", useLink: "Mở",
+    answer: "Nghe", decline: "Từ chối", silence: "Tắt chuông", talkHere: "Nói ở đây", talking: "Đang nói ở đây", mute: "Tắt mic", muted: "Đã tắt mic",
+    them: "Người gọi", you: "Bạn", keypad: "Bàn phím", hangUp: "Kết thúc", call: "Gọi", incoming: "Cuộc gọi đến", outgoing: "Đang gọi…", onCall: "Đang trong cuộc gọi",
+    unknown: "Số không xác định", offline: "ngoại tuyến", online: "trực tuyến", usb: "trực tuyến · USB", noPhone: "Chưa có điện thoại",
+    audioUsb: "Cắm cáp điện thoại vào máy tính để nghe cuộc gọi ở đây.", audioOn: "Âm thanh cuộc gọi đang ở thiết bị này. Dùng tai nghe để tránh vọng tiếng.",
+    audioPhone: "Âm thanh cuộc gọi đang ở điện thoại.", enableRing: "Chạm vào trang một lần để trang đổ chuông khi có cuộc gọi đến.",
+    ringOn: "Trang sẽ đổ chuông khi có cuộc gọi đến (khi đang mở).", micDenied: "Trình duyệt không cho dùng micro.", micLabel: "Micro",
+    needsHttps: "Micro cần link https:// từ NectarLink.", wrongKey: "Khoá trong link không còn đúng. Mở link mới từ NectarLink.",
+    unreachable: "Không kết nối được NectarLink trên máy tính." },
+};
+const L = T[(navigator.language || "en").toLowerCase().startsWith("vi") ? "vi" : "en"];
+document.documentElement.lang = L === T.vi ? "vi" : "en";
+document.querySelectorAll("[data-t]").forEach(e => { e.textContent = L[e.dataset.t]; });
+document.querySelectorAll("[data-ph]").forEach(e => { e.placeholder = L[e.dataset.ph]; });
+const $ = id => document.getElementById(id);
+
+// The access key: from the link (#k=…), then remembered on this device.
+let key = "";
+const keyIn = text => {
+  const m = /(?:[?#&]k=|^)([0-9a-f]{64})\b/i.exec((text || "").trim());
+  return m ? m[1].toLowerCase() : "";
+};
+const fromLink = keyIn(location.search) || keyIn(location.hash);
+try { if (fromLink) localStorage.setItem("nlKey", fromLink); key = fromLink || localStorage.getItem("nlKey") || ""; } catch (_) { key = fromLink || ""; }
+if (location.search || location.hash) history.replaceState(null, "", location.pathname);
+$("keyBtn").onclick = () => {
+  const k = keyIn($("keyInput").value);
+  if (!k) return;
+  try { localStorage.setItem("nlKey", k); } catch (_) {}
+  key = k; $("noKey").classList.add("hidden"); poll();
+};
+
+const api = (path, params = {}, method = "GET") => {
+  const q = new URLSearchParams({ k: key, ...params });
+  return fetch(`${path}?${q}`, { method, cache: "no-store" }).then(async r => {
+    const body = await r.json().catch(() => ({}));
+    if (r.status === 401) {
+      try { localStorage.removeItem("nlKey"); } catch (_) {}
+      key = ""; render();
+      throw new Error(L.wrongKey);
+    }
+    if (!r.ok) throw new Error(body.error || r.statusText);
+    return body;
+  });
+};
+const showError = msg => { $("error").textContent = msg || ""; };
+
+// ---- Keypads ----
+const KEYS = ["1","2","3","4","5","6","7","8","9","*","0","#"];
+for (const k of KEYS) {
+  const b = document.createElement("button"); b.textContent = k;
+  b.onclick = () => { $("number").value += k; };
+  $("dialPad").appendChild(b);
+  const d = document.createElement("button"); d.textContent = k;
+  d.onclick = () => act("dtmf", { digit: k });
+  $("dtmfPad").appendChild(d);
+}
+$("backBtn").onclick = () => { $("number").value = $("number").value.slice(0, -1); };
+$("keysBtn").onclick = () => $("dtmfPad").classList.toggle("hidden");
+
+// ---- Sound ----
+let ctx = null, node = null, mic = null, ws = null, wantAudio = false, micMuted = false, level = 0, micLevel = 0;
+const WORKLET = `
+class Bridge extends AudioWorkletProcessor {
+  constructor() {
+    super(); this.q = []; this.queued = 0; this.cur = null; this.pos = 0; this.started = false;
+    this.ratio = sampleRate / 16000; this.acc = 0; this.sum = 0; this.n = 0; this.mic = new Float32Array(320); this.m = 0;
+    this.port.onmessage = e => {
+      this.q.push(e.data); this.queued += e.data.length;
+      while (this.queued > sampleRate * 0.25 && this.q.length > 1) { this.queued -= this.q.shift().length; }
+    };
+  }
+  process(inputs, outputs) {
+    const out = outputs[0][0];
+    if (!this.started && this.queued >= sampleRate * 0.06) this.started = true;
+    for (let i = 0; i < out.length; i++) {
+      if (!this.cur || this.pos >= this.cur.length) {
+        this.cur = this.started ? (this.q.shift() || null) : null; this.pos = 0;
+        if (this.cur) this.queued -= this.cur.length; else this.started = false;
+      }
+      out[i] = this.cur ? this.cur[this.pos++] : 0;
+    }
+    const inp = inputs[0] && inputs[0][0];
+    if (inp) for (let i = 0; i < inp.length; i++) {
+      this.sum += inp[i]; this.n++; this.acc++;
+      if (this.acc >= this.ratio) {
+        this.acc -= this.ratio; this.mic[this.m++] = this.sum / this.n; this.sum = 0; this.n = 0;
+        if (this.m === 320) {
+          const b = new Int16Array(320);
+          for (let j = 0; j < 320; j++) b[j] = Math.max(-1, Math.min(1, this.mic[j])) * 32767;
+          this.port.postMessage(b.buffer, [b.buffer]); this.m = 0;
+        }
+      }
+    }
+    return true;
+  }
+}
+registerProcessor("bridge", Bridge);`;
+
+async function unlockAudio() {
+  if (!ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+  }
+  if (ctx.state !== "running") await ctx.resume().catch(() => {});
+  updateRingNote();
+}
+document.addEventListener("pointerdown", () => { unlockAudio(); }, { capture: true });
+
+async function startAudio() {
+  wantAudio = true;
+  await unlockAudio();
+  if (!ctx || ws) return;
+  if (!window.isSecureContext || !navigator.mediaDevices) { showError(L.needsHttps); return; }
+  try {
+    if (!node) {
+      const url = URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" }));
+      await ctx.audioWorklet.addModule(url);
+      node = new AudioWorkletNode(ctx, "bridge", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+      node.connect(ctx.destination);
+      node.port.onmessage = e => {
+        const pcm = new Int16Array(e.data);
+        let peak = 0;
+        for (let i = 0; i < pcm.length; i++) peak = Math.max(peak, Math.abs(pcm[i]));
+        micLevel = Math.max(micMuted ? 0 : peak / 32768, micLevel * 0.8);
+        if (ws && ws.readyState === 1 && !micMuted) ws.send(e.data);
+      };
+    }
+    if (!mic) {
+      await openMic(savedMic());
+    }
+  } catch (e) { showError(L.micDenied); wantAudio = false; return; }
+  connectAudio();
+}
+
+// The microphone: the one picked on this device, else the browser's default.
+// (On a Mac the default may be an iPhone's, which is busy if that iPhone is
+// the one calling.)
+let micStream = null;
+function savedMic() { try { return localStorage.getItem("nlMic") || ""; } catch (_) { return ""; } }
+async function openMic(deviceId) {
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 };
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: deviceId ? { ...audio, deviceId: { exact: deviceId } } : audio });
+  } catch (e) {
+    if (!deviceId) throw e;
+    stream = await navigator.mediaDevices.getUserMedia({ audio });
+  }
+  if (mic) mic.disconnect();
+  if (micStream) micStream.getTracks().forEach(t => t.stop());
+  micStream = stream;
+  mic = ctx.createMediaStreamSource(stream);
+  mic.connect(node);
+  const track = stream.getAudioTracks()[0];
+  const devices = await listMics(track?.getSettings().deviceId || deviceId);
+  // Nothing picked yet and the default is a phone's microphone (Continuity):
+  // that phone may be the one on the call, so take this computer's own.
+  if (!deviceId && track && /iphone|continuity|phone/i.test(track.label)) {
+    const own = devices.find(d => d.deviceId !== "default" && !/iphone|continuity|phone/i.test(d.label));
+    if (own) await openMic(own.deviceId);
+  }
+}
+async function listMics(current) {
+  const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput");
+  const select = $("micSelect");
+  select.textContent = "";
+  devices.forEach((d, i) => {
+    const o = document.createElement("option");
+    o.value = d.deviceId; o.textContent = d.label || `${L.micLabel} ${i + 1}`;
+    if (d.deviceId === current) o.selected = true;
+    select.appendChild(o);
+  });
+  $("micPick").classList.toggle("hidden", devices.length < 2);
+  return devices;
+}
+$("micSelect").onchange = async e => {
+  const id = e.target.value;
+  try { localStorage.setItem("nlMic", id); } catch (_) {}
+  try { if (ctx && node) await openMic(id); } catch (_) { showError(L.micDenied); }
+};
+
+function connectAudio() {
+  if (ws) return;
+  const sock = new WebSocket(`wss://${location.host}/api/audio?k=${encodeURIComponent(key)}`);
+  sock.binaryType = "arraybuffer";
+  ws = sock;
+  sock.onmessage = e => {
+    if (!(e.data instanceof ArrayBuffer) || !node) return;
+    const pcm = new Int16Array(e.data), rate = ctx.sampleRate, n = Math.round(pcm.length * rate / 16000);
+    const out = new Float32Array(n);
+    let peak = 0;
+    for (let i = 0; i < n; i++) {
+      const x = i * 16000 / rate, j = Math.floor(x), f = x - j;
+      const a = pcm[j] || 0, b = pcm[Math.min(j + 1, pcm.length - 1)] || 0;
+      out[i] = (a + (b - a) * f) / 32768;
+      peak = Math.max(peak, Math.abs(out[i]));
+    }
+    level = Math.max(peak, level * 0.8);
+    node.port.postMessage(out, [out.buffer]);
+  };
+  sock.onclose = () => { if (ws === sock) ws = null; render(); };
+  render();
+}
+
+function stopAudio() {
+  wantAudio = false;
+  if (ws) { const s = ws; ws = null; s.close(); }
+}
+
+setInterval(() => {
+  $("meterBar").style.width = Math.min(100, level * 300) + "%"; level *= 0.85;
+  $("micBar").style.width = Math.min(100, micLevel * 300) + "%"; micLevel *= 0.85;
+}, 100);
+
+// ---- Ringing ----
+let ringTimer = null;
+function ring(on) {
+  if (on && !ringTimer && ctx && ctx.state === "running") {
+    const beep = () => {
+      for (const [t, f] of [[0, 880], [0.25, 660]]) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = f; g.gain.setValueAtTime(0.15, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.22);
+        o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.24);
+      }
+      if (navigator.vibrate) navigator.vibrate(300);
+    };
+    beep(); ringTimer = setInterval(beep, 1500);
+  } else if (!on && ringTimer) { clearInterval(ringTimer); ringTimer = null; }
+}
+function updateRingNote() { $("ringNote").textContent = ctx && ctx.state === "running" ? L.ringOn : L.enableRing; }
+
+// ---- Calls ----
+let state = null, lastCallId = null, timer = null;
+async function act(action, extra = {}) {
+  showError("");
+  try { await api("/api/action", { action, ...extra }, "POST"); poll(); } catch (e) { showError(e.message); }
+}
+$("answer").onclick = () => { act("answer"); if (state && state.phone && state.phone.usb) startAudio(); };
+$("decline").onclick = () => act("decline");
+$("hangup").onclick = () => act("decline");
+$("silence").onclick = () => act("silence");
+$("muteBtn").onclick = () => { micMuted = !micMuted; render(); };
+$("audioBtn").onclick = () => { if (ws || wantAudio) stopAudio(); else startAudio(); render(); };
+$("callBtn").onclick = async () => {
+  const number = $("number").value.trim();
+  if (!number) return;
+  showError("");
+  if (state && state.phone && state.phone.usb) { wantAudio = true; unlockAudio(); }
+  try { await api("/api/dial", { number }, "POST"); poll(); } catch (e) { showError(e.message); }
+};
+
+function fmt(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+
+function render() {
+  if (!key) { $("noKey").classList.remove("hidden"); return; }
+  const phone = state && state.phone, call = state && state.call;
+  $("phoneName").textContent = phone ? phone.name : L.noPhone;
+  $("dot").classList.toggle("on", !!(phone && phone.online));
+  $("phoneStatus").textContent = phone ? (phone.online ? (phone.usb ? L.usb : L.online) : L.offline) : "";
+  const inCall = !!call;
+  $("callCard").classList.toggle("hidden", !inCall);
+  $("dialCard").classList.toggle("hidden", inCall || !phone || !phone.can_dial);
+  if (!inCall) { $("dtmfPad").classList.add("hidden"); ring(false); clearInterval(timer); timer = null; return; }
+  $("who").textContent = call.name || call.number || L.unknown;
+  const ringing = call.ringing && call.state === "ringing";
+  $("ringingRow").classList.toggle("hidden", !ringing);
+  $("activeRow").classList.toggle("hidden", ringing);
+  ring(ringing && call.incoming !== false);
+  const sub = () => {
+    if (ringing) return call.incoming === false ? L.outgoing : L.incoming;
+    return call.since ? `${L.onCall} · ${fmt(Date.now() - call.since)}` : (call.incoming === false ? L.outgoing : L.onCall);
+  };
+  $("callSub").textContent = (call.name && call.number ? call.number + " · " : "") + sub();
+  if (!timer) timer = setInterval(() => { if (state && state.call) $("callSub").textContent = (state.call.name && state.call.number ? state.call.number + " · " : "") + sub(); }, 1000);
+  const usb = !!(phone && phone.usb);
+  $("audioBtn").disabled = !usb;
+  $("audioBtn").textContent = ws ? L.talking : L.talkHere;
+  $("audioBtn").classList.toggle("on", !!ws);
+  $("muteBtn").disabled = !ws;
+  $("muteBtn").textContent = micMuted ? L.muted : L.mute;
+  $("muteBtn").classList.toggle("on", micMuted);
+  $("meter").classList.toggle("hidden", !ws);
+  $("audioNote").textContent = !usb ? L.audioUsb : (ws ? L.audioOn : L.audioPhone);
+}
+
+async function poll() {
+  if (!key) { render(); return; }
+  try {
+    state = await api("/api/state");
+    showError("");
+  } catch (e) { showError(e.message === L.wrongKey ? e.message : L.unreachable); }
+  const call = state && state.call;
+  const active = call && !(call.ringing && call.state === "ringing");
+  if (!call) { lastCallId = null; if (ws) stopAudio(); micMuted = false; }
+  else if (call.id !== lastCallId) { lastCallId = call.id; }
+  if (active && wantAudio && !ws && state.phone && state.phone.usb) startAudio();
+  render();
+}
+updateRingNote();
+poll();
+setInterval(poll, 800);
+</script>
+</body>
+</html>

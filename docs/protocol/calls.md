@@ -171,10 +171,14 @@ Not in this service:
 - **Recording calls.** Android doesn't let apps other than the phone's
   own record call audio (capturing the voice call stream needs a
   privileged permission), so NectarLink doesn't offer it.
-- **Talking through the PC.** Carrying the call's audio to the PC's
-  microphone and speakers is planned as a Bluetooth hands-free (HFP)
-  link from the PC to the phone, as for a headset; it isn't part of this
-  service.
+- **Talking through the PC.** Not part of this service. The desktop's web
+  phone carries a call's sound outside it, for a phone plugged into the PC
+  with USB debugging allowed (Android 13+): the PC starts the app's
+  `CallAudio` helper over adb as the shell user, which reads the call with
+  `AudioManager.getCallDownlinkExtractionAudioRecord` (`CALL_AUDIO_INTERCEPTION`)
+  and plays the PC's sound to the telephony TX device, 16 kHz mono PCM
+  over the helper's stdout and stdin. Phones whose audio HAL has no
+  telephony TX/RX path can't do this.
 
 ## 3. Privacy
 

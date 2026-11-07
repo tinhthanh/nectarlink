@@ -46,3 +46,4 @@
 # Conscrypt (used by Elevated wireless ADB TLS handshake)
 -keep class org.conscrypt.** { *; }
 -dontwarn org.conscrypt.**
+-keep class app.nectarlink.android.elevated.CallAudio { public static void main(java.lang.String[]); }

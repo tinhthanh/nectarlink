@@ -3268,6 +3268,68 @@ Item {
                         Divider { width: parent.width }
                         ListRow {
                             width: parent.width
+                            iconPath: Icons.phone
+                            title: qsTr("Web phone")
+                            description: Preferences.webPhoneEnabled
+                                ? qsTr("Open the link below on a phone or computer on this network to answer and make calls. With the phone plugged in, the call's sound is in the browser.")
+                                : qsTr("Answer and make your phone's calls from a browser on this network.")
+                            Toggle {
+                                anchors.verticalCenter: parent.verticalCenter
+                                label: qsTr("Web phone")
+                                checked: Preferences.webPhoneEnabled
+                                onToggled: (on) => Preferences.webPhoneEnabled = on
+                            }
+                        }
+                        Row {
+                            visible: Preferences.webPhoneEnabled && Preferences.webPhoneUrl.length > 0
+                            x: 16
+                            width: parent.width - 32
+                            spacing: 16
+                            bottomPadding: 12
+                            QrCode {
+                                width: 132; height: 132
+                                path: Preferences.webPhoneQrPath
+                                modules: Preferences.webPhoneQrSize
+                                Accessible.role: Accessible.Graphic
+                                Accessible.name: qsTr("Web phone QR code")
+                            }
+                            Column {
+                                width: parent.width - 132 - 16
+                                spacing: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                Txt {
+                                    width: parent.width
+                                    role: "bodySmall"
+                                    font.family: Theme.fontMono
+                                    wrapMode: Text.WrapAnywhere
+                                    text: Preferences.webPhoneUrl
+                                }
+                                Txt {
+                                    width: parent.width
+                                    role: "bodySmall"
+                                    muted: true
+                                    wrapMode: Text.WordWrap
+                                    text: qsTr("The browser warns about the certificate the first time: it's this PC's own. Anyone with the link can use your phone's calls, so share it only with people you trust; turning this off and on makes a new link.")
+                                }
+                                Button {
+                                    id: copyWebPhoneBtn
+                                    property bool copied: false
+                                    text: copied ? qsTr("Copied link") : qsTr("Copy link")
+                                    iconPath: copied ? Icons.check : Icons.copy
+                                    variant: "tonal"
+                                    size: "sm"
+                                    onClicked: {
+                                        AppController.copyText(Preferences.webPhoneUrl)
+                                        copied = true
+                                        copyWebPhoneTimer.restart()
+                                    }
+                                    Timer { id: copyWebPhoneTimer; interval: 2000; onTriggered: copyWebPhoneBtn.copied = false }
+                                }
+                            }
+                        }
+                        Divider { width: parent.width }
+                        ListRow {
+                            width: parent.width
                             iconPath: Icons.desktop
                             title: qsTr("NectarLink %1").arg(AppController.version)
                                    + (AppController.build.length > 0 ? " (" + AppController.build + ")" : "")

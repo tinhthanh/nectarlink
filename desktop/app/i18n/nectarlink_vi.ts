@@ -8179,6 +8179,34 @@ Yêu cầu
         <source>80% (Protect battery)</source>
         <translation>80% (Bảo vệ pin)</translation>
     </message>
+    <message>
+        <source>Web phone</source>
+        <translation>Điện thoại qua web</translation>
+    </message>
+    <message>
+        <source>Open the link below on a phone or computer on this network to answer and make calls. With the phone plugged in, the call&apos;s sound is in the browser.</source>
+        <translation>Mở link bên dưới trên điện thoại hoặc máy tính cùng mạng để nghe và gọi điện. Khi điện thoại cắm cáp vào máy này, âm thanh cuộc gọi nằm trong trình duyệt.</translation>
+    </message>
+    <message>
+        <source>Answer and make your phone&apos;s calls from a browser on this network.</source>
+        <translation>Nghe và gọi điện bằng điện thoại của bạn từ trình duyệt trên cùng mạng.</translation>
+    </message>
+    <message>
+        <source>Web phone QR code</source>
+        <translation>Mã QR điện thoại qua web</translation>
+    </message>
+    <message>
+        <source>The browser warns about the certificate the first time: it&apos;s this PC&apos;s own. Anyone with the link can use your phone&apos;s calls, so share it only with people you trust; turning this off and on makes a new link.</source>
+        <translation>Lần đầu trình duyệt sẽ cảnh báo chứng chỉ: đó là chứng chỉ riêng của máy tính này. Ai có link đều dùng được cuộc gọi của điện thoại, nên chỉ chia sẻ cho người tin cậy; tắt rồi bật lại sẽ tạo link mới.</translation>
+    </message>
+    <message>
+        <source>Copied link</source>
+        <translation>Đã sao chép link</translation>
+    </message>
+    <message>
+        <source>Copy link</source>
+        <translation>Sao chép link</translation>
+    </message>
 </context>
 <context>
     <name>Setup</name>
