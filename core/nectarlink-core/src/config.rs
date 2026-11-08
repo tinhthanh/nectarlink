@@ -44,6 +44,12 @@ pub struct NodeConfig {
     /// ADB server address on a PC (`127.0.0.1:5037`) for automatic USB
     /// detection, port forwarding, and USB auto-pairing.
     pub adb_server: Option<std::net::SocketAddr>,
+    /// Whether a phone that opens a tunnel over the cable unpaired starts
+    /// pairing on its own (on by default). An app that decides which of a
+    /// phone's apps to pair (several can answer on the cable: a work profile,
+    /// a second app on this core) turns it off and pairs with
+    /// [`Node::pairing_start_nearby`](crate::Node::pairing_start_nearby).
+    pub usb_auto_pair: bool,
     /// How connections pace bulk data (file transfers): the congestion
     /// controller and the flow-control windows.
     pub transport: TransportTuning,
@@ -138,6 +144,7 @@ impl NodeConfig {
             localsend_port,
             usb_port: None,
             adb_server: None,
+            usb_auto_pair: true,
             transport: TransportTuning::from_env(),
         }
     }

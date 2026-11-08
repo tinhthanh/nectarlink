@@ -5397,8 +5397,20 @@ async fn start_usb_device_in(
     usb_port: Option<u16>,
     offers: &[&str],
 ) -> TestDevice {
+    start_usb_device_with(dir, name, kind, usb_port, offers, true).await
+}
+
+async fn start_usb_device_with(
+    dir: TempDir,
+    name: &'static str,
+    kind: DeviceKind,
+    usb_port: Option<u16>,
+    offers: &[&str],
+    usb_auto_pair: bool,
+) -> TestDevice {
     init_logging();
     let mut config = NodeConfig::new(dir.path(), info(name, kind), "0.0.1-test");
+    config.usb_auto_pair = usb_auto_pair;
     config.lan_discovery = false;
     config.away_mode = false;
     config.usb_port = usb_port;
@@ -5450,6 +5462,49 @@ async fn two_profiles_on_one_phone_each_get_their_own_usb_port() {
     pc.node.shutdown().await;
     work.node.shutdown().await;
     personal.node.shutdown().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn usb_auto_pair_off_leaves_pairing_to_the_app() {
+    // An app that picks which of a phone's apps to pair (vglink: Vetgo Phone,
+    // not NectarLink beside it) turns core's own pairing off: a tunnel opens
+    // and nothing pairs until the app asks, then it pairs with no code.
+    let mut phone = start_usb_device("Pixel USB", DeviceKind::Phone, Some(0), &[]).await;
+    let mut pc =
+        start_usb_device_with(tempfile::tempdir().unwrap(), "Desktop USB", DeviceKind::Desktop, None, &[], false)
+            .await;
+    let phone_id = phone.node.device_id();
+    let usb_port = phone.node.usb_port().expect("phone bound ephemeral USB TCP listener");
+    let tunnel_addr: SocketAddr = ("127.0.0.1".parse::<std::net::IpAddr>().unwrap(), usb_port).into();
+    assert_eq!(pc.node.connect_usb_tunnel(tunnel_addr).await.expect("connect USB tunnel"), phone_id);
+
+    let quiet = tokio::time::Instant::now() + std::time::Duration::from_secs(4);
+    loop {
+        tokio::select! {
+            ev = pc.events.recv() => if let Ok(NodeEvent::Pairing(p)) = ev {
+                panic!("core paired by itself with usb_auto_pair off: {p:?}");
+            },
+            () = tokio::time::sleep_until(quiet) => break,
+        }
+    }
+    assert!(pc.node.paired_devices().unwrap().is_empty());
+
+    pc.node.pairing_start_nearby(phone_id).await.expect("the app starts pairing");
+    let mut saw_code = false;
+    wait_for(&mut pc, "pc paired once asked", |e| match e {
+        NodeEvent::Pairing(PairingEvent::SasCode { .. }) => {
+            saw_code = true;
+            None
+        }
+        NodeEvent::Pairing(PairingEvent::Paired(d)) if d.id == phone_id => Some(()),
+        _ => None,
+    })
+    .await;
+    assert!(!saw_code, "no code is shown over the cable");
+    let _ = &mut phone;
+
+    pc.node.shutdown().await;
+    phone.node.shutdown().await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -218,6 +218,8 @@ pub(crate) struct Shared {
     pub(crate) usb_inbound: Mutex<std::collections::HashSet<DeviceId>>,
     /// USB peers that are only paired by hand (Android emulators).
     pub(crate) usb_manual_pair: Mutex<std::collections::HashSet<DeviceId>>,
+    /// [`NodeConfig::usb_auto_pair`].
+    pub(crate) usb_auto_pair: bool,
     /// Wakes the PC-side ADB watcher immediately on `refresh()`.
     pub(crate) usb_poke: Notify,
     /// Wakes the persistent send-queue coordinator when items are enqueued, retried, or sessions change.
@@ -1630,6 +1632,7 @@ impl Node {
             usb_helpers: Mutex::new(HashMap::new()),
             usb_inbound: Mutex::new(std::collections::HashSet::new()),
             usb_manual_pair: Mutex::new(std::collections::HashSet::new()),
+            usb_auto_pair: config.usb_auto_pair,
             usb_poke: Notify::new(),
             queue_notify: Arc::new(Notify::new()),
             queue_active_peers: Mutex::new(std::collections::HashSet::new()),

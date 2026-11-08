@@ -234,7 +234,7 @@ pub(crate) async fn connect_usb_tunnel(shared: &Arc<Shared>, forwarded_tcp: Sock
         node.on_usb_tunnel_disconnected(phone_id, bridge_addr).await;
     });
 
-    shared.on_usb_tunnel_connected(phone_id, phone_name, bridge_addr, tunnel_cancel, true);
+    shared.on_usb_tunnel_connected(phone_id, phone_name, bridge_addr, tunnel_cancel, shared.usb_auto_pair);
     Ok(phone_id)
 }
 
@@ -377,7 +377,7 @@ async fn run_port_worker(
             let forwarded = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), host_port);
             let target = UsbTarget {
                 phone_port,
-                auto_pair: auto_pairs(&serial),
+                auto_pair: shared.usb_auto_pair && auto_pairs(&serial),
                 profiles: profiles.clone(),
                 serial: serial.clone(),
                 adb_addr,
