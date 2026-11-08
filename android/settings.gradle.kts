@@ -28,4 +28,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Nectarlink"
 include(":app")
-include(":phone")

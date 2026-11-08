@@ -100,14 +100,6 @@ strip = "symbols"
 inherits = "release"
 strip = "debuginfo"
 
-# Vetgo Phone's release builds: optimized for size (a small app that moves
-# texts and call events, not files). Symbols stay for uniffi-bindgen; the
-# Android build strips them when it packages the library.
-[profile.android-small]
-inherits = "android"
-opt-level = "s"
-lto = "fat"
-
 # swarm-discovery 0.6.3 respins its GC timer every 10 ms forever once an mDNS
 # updater has stopped (each mDNS cadence change leaks one such loop). Local fix
 # in third_party/swarm-discovery until a fixed release is out.
