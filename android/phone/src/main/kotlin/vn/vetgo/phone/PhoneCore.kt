@@ -172,7 +172,10 @@ class PhoneCore(context: Context) : EventListener {
         val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
             ?.takeIf { it.isNotBlank() } ?: Build.MODEL
         return DeviceInfo(
-            name = name,
+            // The invisible mark tells a vglink box this is Vetgo Phone before
+            // pairing (the name is all it sees then), so it pairs this app
+            // rather than another one on the phone using the cable.
+            name = name + VETGO_MARK,
             kind = DeviceKind.PHONE,
             os = "android",
             osVersion = Build.VERSION.RELEASE,
@@ -186,5 +189,7 @@ class PhoneCore(context: Context) : EventListener {
 
     companion object {
         private const val TAG = "VetgoPhone"
+        /** U+2063 INVISIBLE SEPARATOR: vglink's dto::VETGO_MARK. */
+        const val VETGO_MARK = "\u2063"
     }
 }
