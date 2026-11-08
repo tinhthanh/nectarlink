@@ -26,15 +26,19 @@ android {
         applicationId = "vn.vetgo.phone"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.1.3"
     }
 
     buildTypes {
         release {
             // Signed with the debug key until the app has its own (local builds).
             signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = false
+            // R8 drops the unused code (Compose, coroutines, ...); the core's
+            // library is built with the android-small profile.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -47,14 +51,26 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // The core's library compressed in the APK: the box fetches and installs
+    // it over the cable, so the download is what counts (about a third the
+    // size), not the few MB the phone unpacks it into.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 /** Builds the Rust core into `<outputDir>/<abi>/libnectarlink_ffi.so`. */
 abstract class PhoneCargoNdkBuild : DefaultTask() {
     @get:Inject abstract val exec: ExecOperations
     @get:Input abstract val abis: ListProperty<String>
+    @get:Input abstract val profile: Property<String>
     @get:InputDirectory @get:PathSensitive(PathSensitivity.RELATIVE) abstract val crates: DirectoryProperty
     @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val lockFile: RegularFileProperty
+    /** The workspace manifest: its profiles decide how the library is built. */
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val manifest: RegularFileProperty
     @get:Internal abstract val workspace: DirectoryProperty
     @get:Internal abstract val ndk: DirectoryProperty
     @get:OutputDirectory abstract val outputDir: DirectoryProperty
@@ -68,7 +84,7 @@ abstract class PhoneCargoNdkBuild : DefaultTask() {
                 buildList {
                     addAll(listOf("cargo", "ndk", "--platform", "26", "-o", outputDir.get().asFile.path))
                     abis.get().forEach { addAll(listOf("-t", it)) }
-                    addAll(listOf("build", "--profile", "android", "--locked", "-p", "nectarlink-ffi"))
+                    addAll(listOf("build", "--profile", profile.get(), "--locked", "-p", "nectarlink-ffi"))
                 },
             )
         }
@@ -133,8 +149,10 @@ androidComponents {
         val cargo = tasks.register<PhoneCargoNdkBuild>("cargoNdkBuild$suffix") {
             description = "Builds the Rust core for Android."
             abis.set(rustAbis)
+            profile.set(if (variant.buildType == "release") "android-small" else "android")
             crates.set(workspaceDir.dir("core"))
             lockFile.set(workspaceDir.file("Cargo.lock"))
+            manifest.set(workspaceDir.file("Cargo.toml"))
             workspace.set(workspaceDir)
             ndk.set(androidComponents.sdkComponents.ndkDirectory)
         }
